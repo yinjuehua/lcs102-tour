@@ -3,17 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PAGE TITLE</title>
+<title>Stop N: TITLE</title>
 <link rel="stylesheet" href="tour.css">
 </head>
 <body>
-<!-- data-story: fleet (blue tag) | ship (gold tag) | both (grey tag) -->
-<main class="tour" data-story="fleet">
+<!-- Stop N of 11 · ThingLink scene: "SCENE NAME" -->
+<!-- data-story: fleet (blue tag) | ship (gold tag) | both (grey tag)
+     Leave any data-... empty ("") to hide that part.
+     data-next: link to the next stop; the button shows on the last page only. -->
+<main class="tour"
+  data-kicker="Movement · Milestone N"
+  data-title="Title on the scene"
+  data-story="fleet"
+  data-ships="130"
+  data-fact="Milestone fact line"
+  data-next=""
+  data-next-label="Next stop">
 
+  <!-- P-01 -->
   <section class="page">
     <p>Page 1 text.</p>
   </section>
 
+  <!-- P-02 -->
   <section class="page">
     <p>Page 2 text.</p>
   </section>
