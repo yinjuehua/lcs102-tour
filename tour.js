@@ -36,7 +36,7 @@
       (a('fact') ? '<div class="fact"><div class="lab">Milestone fact</div><div class="factval">' + esc(a('fact')) + '</div></div>' : '');
     tour.appendChild(strip);
     var fill = strip.querySelector('.fill');
-    if (fill) setTimeout(function(){ fill.style.width = Math.min(100, parseFloat(a('ships')) / total * 100) + '%'; }, 150);
+    if (fill) fill.style.width = Math.min(100, parseFloat(a('ships')) / total * 100) + '%';
   }
 
   // top-level video (outside the pages) sits above the text
