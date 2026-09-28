@@ -144,6 +144,22 @@
   go(0);
 })();
 
+/* Then and now timeline: tap a step to highlight it (first step starts highlighted) */
+document.querySelectorAll('.tl').forEach(function(tl){
+  var items = Array.prototype.slice.call(tl.querySelectorAll('.tl-item'));
+  function pick(k){ items.forEach(function(it, n){ it.classList.toggle('on', n === k); it.setAttribute('aria-pressed', n === k ? 'true' : 'false'); }); }
+  items.forEach(function(it, k){
+    it.setAttribute('tabindex', '0'); it.setAttribute('role', 'button');
+    it.addEventListener('click', function(){ pick(k); });
+    it.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(k); }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); var n = Math.min(items.length - 1, k + 1); pick(n); items[n].focus(); }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); var p = Math.max(0, k - 1); pick(p); items[p].focus(); }
+    });
+  });
+  pick(0);
+});
+
 /* hero photos: if an image file is not uploaded yet, keep only its caption + source link */
 document.querySelectorAll('.photos img').forEach(function(img){
   function miss(){ img.closest('figure').classList.add('missing'); }
