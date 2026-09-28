@@ -116,8 +116,8 @@ body{background:var(--navy-2);color:var(--ink);font-family:var(--serif);
 /* ---- hero cards (stop 9) ---- */
 .hero p{font-size:calc(var(--body-size) - 1px);line-height:1.58;color:var(--ink-soft);margin:0 0 12px}
 .photos{display:flex;gap:10px;margin:0 0 12px;flex-wrap:wrap}
-.photos figure{margin:0;flex:1 1 140px;max-width:260px}
-.photos img{width:100%;aspect-ratio:4/5;object-fit:cover;border:1px solid var(--line);border-radius:4px;display:block;background:#0b141d}
+.photos figure{margin:0;flex:1 1 160px;max-width:300px}
+.photos img{width:100%;height:auto;max-height:320px;object-fit:contain;border:1px solid var(--line);border-radius:4px;display:block;background:#0b141d}
 .photos figcaption{font-family:var(--sans);font-size:10.5px;line-height:1.4;color:var(--muted);margin-top:5px}
 .photos figcaption a{color:var(--muted)} .photos figcaption a:hover{color:var(--brass-lite)}
 .links{border-top:1px solid rgba(201,162,75,.18);padding-top:4px}
