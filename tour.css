@@ -8,7 +8,6 @@
   --serif:"Iowan Old Style","Palatino Linotype",Georgia,"Times New Roman",serif;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --body-size:clamp(14px,3.4vw,16.5px);   /* main text size */
-  --total-ships:130;                       /* full bar = this many ships */
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -35,16 +34,11 @@ body{background:var(--navy-2);color:var(--ink);font-family:var(--serif);
 .story.both{color:var(--ink-soft);border-color:rgba(147,160,173,.4);background:rgba(147,160,173,.1)}
 
 /* ---- strip: ship counter + milestone fact ---- */
-.t-strip{display:grid;grid-template-columns:minmax(120px,.8fr) 1.4fr;gap:18px;align-items:end;
-  margin:0 22px;padding:8px 0 10px;border-bottom:1px solid rgba(201,162,75,.18)}
-@media (max-width:420px){.t-strip{grid-template-columns:1fr;gap:8px}}
+.t-strip{display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;
+  margin:0 22px;padding:6px 0 10px;border-bottom:1px solid rgba(201,162,75,.18)}
 .lab{font-family:var(--sans);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
-.ctr .head{display:flex;justify-content:space-between;align-items:baseline}
-.ctr .num{font-size:21px;color:var(--brass-lite);line-height:1}
-.bar{height:5px;border-radius:3px;background:rgba(255,255,255,.07);margin-top:5px;overflow:hidden}
-.bar .fill{height:100%;width:0;background:linear-gradient(90deg,var(--brass),var(--brass-lite));
-}
-.fact .factval{font-size:14.5px;color:var(--ink);line-height:1.35;margin-top:4px}
+.ctr .num{font-family:var(--sans);font-size:11px;letter-spacing:.08em;color:var(--brass-lite);font-weight:600}
+.fact .factval{font-size:14px;color:var(--ink);line-height:1.35;margin-top:3px}
 
 /* ---- body: the text pages ---- */
 .t-body{flex:1;min-height:0;overflow-y:auto;padding:12px 22px 10px}
@@ -91,3 +85,10 @@ body{background:var(--navy-2);color:var(--ink);font-family:var(--serif);
   padding:4px 9px;cursor:pointer;opacity:0;transition:opacity .25s}
 .yt:hover .yt-pause,.yt.paused .yt-pause{opacity:1}
 .t-media{padding:4px 22px 0}
+
+/* ---- video page: hide title/counter, video fills the frame ---- */
+.tour.media-mode .t-head,.tour.media-mode .t-strip{display:none}
+.tour.media-mode .t-body{padding:10px 12px 8px;container-type:size;overflow:hidden}
+.page.video-only.on{height:100%;display:flex;align-items:center;justify-content:center}
+.page.video-only .yt{margin:0;width:min(100cqw, calc(100cqh * 16 / 9))}
+.tour.media-mode .t-foot{padding:8px 14px 10px}

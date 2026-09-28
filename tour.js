@@ -29,19 +29,23 @@
 
   // counter + fact strip (only if either is set)
   if (a('ships') || a('fact')) {
-    var total = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--total-ships')) || 130;
     var strip = document.createElement('div'); strip.className = 't-strip';
     strip.innerHTML =
-      (a('ships') ? '<div class="ctr"><div class="head"><span class="lab">Ships of the class</span><span class="num">' + esc(a('ships')) + '</span></div><div class="bar"><div class="fill"></div></div></div>' : '<div></div>') +
+      (a('ships') ? '<div class="ctr"><span class="lab">Ships of the class:</span> <span class="num">' + esc(a('ships')) + '</span></div>' : '') +
       (a('fact') ? '<div class="fact"><div class="lab">Milestone fact</div><div class="factval">' + esc(a('fact')) + '</div></div>' : '');
     tour.appendChild(strip);
-    var fill = strip.querySelector('.fill');
-    if (fill) fill.style.width = Math.min(100, parseFloat(a('ships')) / total * 100) + '%';
   }
 
   // top-level video (outside the pages) sits above the text
   tour.querySelectorAll(':scope > .yt').forEach(function(v){
     var m = document.createElement('div'); m.className = 't-media'; m.appendChild(v); tour.appendChild(m);
+  });
+
+  // pages that contain a video: hide title/counter while shown; video-only pages fill the frame
+  pages.forEach(function(p){
+    if (p.querySelector('.yt')) p.classList.add('has-video');
+    var kids = Array.prototype.filter.call(p.children, function(el){ return el.nodeType === 1; });
+    if (kids.length === 1 && kids[0].classList.contains('yt')) p.classList.add('video-only');
   });
 
   // body
@@ -81,6 +85,7 @@
     next.disabled = last;
     if (nextStop) { next.style.display = last ? 'none' : ''; nextStop.style.display = last ? '' : 'none'; }
     body.scrollTop = 0;
+    tour.classList.toggle('media-mode', pages[i].classList.contains('has-video'));
     pages.forEach(function(p, k){ if (k !== i) p.querySelectorAll('.yt').forEach(function(v){ v._stop && v._stop(); }); });
   }
   prev.onclick = function(){ go(i - 1); };
