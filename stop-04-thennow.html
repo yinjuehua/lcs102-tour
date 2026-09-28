@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="tour.css">
 </head>
 <body>
-<!-- Stop 4 · Then and now: its own Embed tag -->
+<!-- Stop 4 · Then and now: its own Embed tag (timeline) -->
 <main class="tour"
   data-kicker="The Ship · Milestone 3"
   data-title="Then and now"
@@ -16,12 +16,14 @@
   data-fact="">
 
   <section class="page">
-    <!-- M3-TN-1 -->
-    <div class="tn"><b>Who helped then:</b> the first crew who brought her to life, including the boatswain&#x27;s mate, the quartermaster, the ship&#x27;s cook, and the machinist&#x27;s mate.</div>
-    <!-- M3-TN-2 -->
-    <div class="tn"><b>In the Navy today:</b> Boatswain&#x27;s Mate, Quartermaster, Culinary Specialist, and Machinist&#x27;s Mate.</div>
-    <!-- M3-TN-3 -->
-    <div class="tn"><b>Beyond the Navy:</b> the merchant marine and the maritime academies.</div>
+    <ol class="tl">
+      <!-- M3-TN-1 (guide heading: "Who helped then:") -->
+      <li class="tl-item then"><div class="tl-era">Then</div><h3>Who helped then</h3><p>the first crew who brought her to life, including the boatswain&#x27;s mate, the quartermaster, the ship&#x27;s cook, and the machinist&#x27;s mate.</p></li>
+      <!-- M3-TN-2 (guide heading: "In the Navy today:") -->
+      <li class="tl-item navy"><div class="tl-era">Now · In the Navy</div><h3>In the Navy today</h3><p>Boatswain&#x27;s Mate, Quartermaster, Culinary Specialist, and Machinist&#x27;s Mate.</p></li>
+      <!-- M3-TN-3 (guide heading: "Beyond the Navy:") -->
+      <li class="tl-item beyond"><div class="tl-era">Now · Beyond the Navy</div><h3>Beyond the Navy</h3><p>the merchant marine and the maritime academies.</p></li>
+    </ol>
   </section>
 
 </main>

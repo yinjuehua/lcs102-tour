@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="tour.css">
 </head>
 <body>
-<!-- Stop 6 · Then and now: its own Embed tag -->
+<!-- Stop 6 · Then and now: its own Embed tag (timeline) -->
 <main class="tour"
   data-kicker="The Ship · Milestone 5"
   data-title="Then and now"
@@ -16,12 +16,14 @@
   data-fact="">
 
   <section class="page">
-    <!-- M5-TN-1 -->
-    <div class="tn"><b>Who Helped Then?</b> the radarmen, the anti-aircraft gunners, the damage controlmen, and the corpsmen who fought the ship and saved the wounded.</div>
-    <!-- M5-TN-2 -->
-    <div class="tn"><b>In the Navy Today</b> Operations Specialist, Fire Controlman, Electronics Technician, and Hospital Corpsman.</div>
-    <!-- M5-TN-3 -->
-    <div class="tn"><b>Beyond the Navy</b> defense electronics and radar engineering, and emergency medicine</div>
+    <ol class="tl">
+      <!-- M5-TN-1 (guide heading: "Who Helped Then?") -->
+      <li class="tl-item then"><div class="tl-era">Then</div><h3>Who helped then</h3><p>the radarmen, the anti-aircraft gunners, the damage controlmen, and the corpsmen who fought the ship and saved the wounded.</p></li>
+      <!-- M5-TN-2 (guide heading: "In the Navy Today") -->
+      <li class="tl-item navy"><div class="tl-era">Now · In the Navy</div><h3>In the Navy today</h3><p>Operations Specialist, Fire Controlman, Electronics Technician, and Hospital Corpsman.</p></li>
+      <!-- M5-TN-3 (guide heading: "Beyond the Navy") -->
+      <li class="tl-item beyond"><div class="tl-era">Now · Beyond the Navy</div><h3>Beyond the Navy</h3><p>defense electronics and radar engineering, and emergency medicine</p></li>
+    </ol>
   </section>
 
 </main>

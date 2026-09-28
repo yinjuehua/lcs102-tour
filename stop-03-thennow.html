@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="tour.css">
 </head>
 <body>
-<!-- Stop 3 · Then and now: its own Embed tag -->
+<!-- Stop 3 · Then and now: its own Embed tag (timeline) -->
 <main class="tour"
   data-kicker="The Ship · Milestone 2"
   data-title="Then and now"
@@ -16,12 +16,14 @@
   data-fact="">
 
   <section class="page">
-    <!-- M2-TN-1 -->
-    <div class="tn"><b>Who helped then:</b> Navy instructors at the gunnery, signal, and engineering schools, and the crews at the amphibious training bases.</div>
-    <!-- M2-TN-2 -->
-    <div class="tn"><b>In the Navy today:</b> boot camp at Great Lakes, and then a rating.</div>
-    <!-- M2-TN-3 -->
-    <div class="tn"><b>Beyond the Navy:</b> trade schools and apprenticeships, and youth programs like the Sea Cadets.</div>
+    <ol class="tl">
+      <!-- M2-TN-1 (guide heading: "Who helped then:") -->
+      <li class="tl-item then"><div class="tl-era">Then</div><h3>Who helped then</h3><p>Navy instructors at the gunnery, signal, and engineering schools, and the crews at the amphibious training bases.</p></li>
+      <!-- M2-TN-2 (guide heading: "In the Navy today:") -->
+      <li class="tl-item navy"><div class="tl-era">Now · In the Navy</div><h3>In the Navy today</h3><p>boot camp at Great Lakes, and then a rating.</p></li>
+      <!-- M2-TN-3 (guide heading: "Beyond the Navy:") -->
+      <li class="tl-item beyond"><div class="tl-era">Now · Beyond the Navy</div><h3>Beyond the Navy</h3><p>trade schools and apprenticeships, and youth programs like the Sea Cadets.</p></li>
+    </ol>
   </section>
 
 </main>
