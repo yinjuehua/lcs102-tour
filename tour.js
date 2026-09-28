@@ -84,6 +84,8 @@
       });
       body.scrollTop = 0;
     }
+    // opened from one ThingLink icon (#history etc.): show only that category
+    if (location.hash && panels.some(function(p){ return '#' + p.id === location.hash; })) tour.classList.add('single');
     showTab(location.hash.slice(1));
     window.addEventListener('hashchange', function(){ showTab(location.hash.slice(1)); });
   }

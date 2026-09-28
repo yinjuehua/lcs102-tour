@@ -154,3 +154,12 @@ a.ref-title:hover{color:var(--brass-lite);text-decoration:underline}
 
 .photos figure.missing img{display:none}
 .photos figure.missing figcaption{margin-top:0;padding:10px;border:1px dashed var(--line);border-radius:4px}
+
+.tour.single .tab:not(.on){display:none}
+.tour.single .tab{cursor:default;pointer-events:none}
+.ref.is-start{border-left:2px solid var(--brass);padding-left:12px;margin-left:-14px}
+.frame{position:relative;width:100%;aspect-ratio:16/9;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:#000;margin:4px 0 10px}
+.frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+p.ref-src{margin:0 0 2px}
+.page p.ref-src{font-family:var(--sans);font-size:12px;color:var(--muted);line-height:1.4}
+.page p.ref-desc{font-family:var(--sans);font-size:13.5px;line-height:1.5;color:var(--ink-soft);margin:4px 0 10px}
