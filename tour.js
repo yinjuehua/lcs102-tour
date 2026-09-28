@@ -15,23 +15,34 @@
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 
   var pages = Array.prototype.slice.call(tour.querySelectorAll('.page'));
-  var story = a('story') || 'fleet';
+  var story = a('story') || '';
   var names = {fleet:'Fleet story', ship:'LCS-102 story', both:'Fleet story and LCS-102 story'};
   var label = a('label') || names[story] || story;
 
-  // header
+  // header (S-HDR brand line, kicker, title, story tag)
+  var BRAND = 'USS LCS-102', BRAND_SUB = 'The last intact ship of her class, and the fleet she stands for';
+  var hasHead = a('kicker') || a('title');
   var head = document.createElement('div'); head.className = 't-head';
   head.innerHTML =
+    '<div class="brand">' + BRAND + '<span>' + BRAND_SUB + '</span></div>' +
     (a('kicker') ? '<div class="kicker">' + esc(a('kicker')) + '</div>' : '') +
     (a('title')  ? '<h1 class="t-title">' + esc(a('title')) + '</h1>' : '') +
-    '<span class="story ' + esc(story) + '">' + esc(label) + '</span>';
-  tour.appendChild(head);
+    '<span class="story"></span>';
+  if (hasHead) tour.appendChild(head);
+  var tagEl = head.querySelector('.story');
+  function setStory(s){
+    s = s || '';
+    tagEl.className = 'story ' + s;
+    tagEl.textContent = (s === story && a('label')) ? a('label') : (names[s] || '');
+    tagEl.style.display = s ? '' : 'none';
+  }
+  setStory(story);
 
   // counter + fact strip (only if either is set)
   if (a('ships') || a('fact')) {
     var strip = document.createElement('div'); strip.className = 't-strip';
     strip.innerHTML =
-      (a('ships') ? '<div class="ctr"><span class="lab">Ships of the class:</span> <span class="num">' + esc(a('ships')) + '</span></div>' : '') +
+      (a('ships') ? '<div class="ctr"><span class="lab">Ships of the class:</span> <span class="num">' + esc(a('ships')) + '</span><span class="sub">130 built · 1 intact today</span></div>' : '') +
       (a('fact') ? '<div class="fact"><div class="lab">Milestone fact</div><div class="factval">' + esc(a('fact')) + '</div></div>' : '');
     tour.appendChild(strip);
   }
@@ -43,7 +54,6 @@
 
   // pages that contain a video: hide title/counter while shown; video-only pages fill the frame
   pages.forEach(function(p){
-    if (p.querySelector('.yt')) p.classList.add('has-video');
     var kids = Array.prototype.filter.call(p.children, function(el){ return el.nodeType === 1; });
     if (kids.length === 1 && kids[0].classList.contains('yt')) p.classList.add('video-only');
   });
@@ -53,9 +63,33 @@
   pages.forEach(function(p){ body.appendChild(p); });
   tour.appendChild(body);
 
+  // tabs: <section class="panel" id="history" data-tab="History"> ... ; open one directly with #history
+  var panels = Array.prototype.slice.call(tour.querySelectorAll('.panel'));
+  if (panels.length) {
+    var tabs = document.createElement('div'); tabs.className = 't-tabs';
+    panels.forEach(function(p){
+      body.appendChild(p);
+      var t = document.createElement('button'); t.className = 'tab'; t.type = 'button';
+      t.textContent = p.getAttribute('data-tab'); t.onclick = function(){ showTab(p.id); history.replaceState(null, '', '#' + p.id); };
+      tabs.appendChild(t);
+    });
+    tour.insertBefore(tabs, body);
+    function showTab(id){
+      var found = panels.some(function(p){ return p.id === id; }); if (!found) id = panels[0].id;
+      panels.forEach(function(p, k){
+        var on = p.id === id; p.classList.toggle('on', on); tabs.children[k].classList.toggle('on', on);
+        if (!on) p.querySelectorAll('.yt').forEach(function(v){ v._stop && v._stop(); });
+      });
+      body.scrollTop = 0;
+    }
+    showTab(location.hash.slice(1));
+    window.addEventListener('hashchange', function(){ showTab(location.hash.slice(1)); });
+  }
+  if (!pages.length) return;
+
   // footer
   var foot = document.createElement('div'); foot.className = 't-foot';
-  foot.innerHTML = '<button class="move" id="prev">‹ Back</button><div class="dots"></div><span id="nextwrap"><button class="move" id="next">Next ›</button></span>';
+  foot.innerHTML = '<button class="move" id="prev">\u2039 Back</button><div class="dots"></div><span id="nextwrap"><button class="move" id="next">Next \u203a</button></span>';
   tour.appendChild(foot);
 
   var dots = foot.querySelector('.dots'), prev = foot.querySelector('#prev'), next = foot.querySelector('#next'), i = 0;
@@ -85,7 +119,8 @@
     next.disabled = last;
     if (nextStop) { next.style.display = last ? 'none' : ''; nextStop.style.display = last ? '' : 'none'; }
     body.scrollTop = 0;
-    tour.classList.toggle('media-mode', pages[i].classList.contains('has-video'));
+    tour.classList.toggle('media-mode', pages[i].classList.contains('video-only'));
+    setStory(pages[i].getAttribute('data-story') || story);
     pages.forEach(function(p, k){ if (k !== i) p.querySelectorAll('.yt').forEach(function(v){ v._stop && v._stop(); }); });
   }
   prev.onclick = function(){ go(i - 1); };
@@ -104,6 +139,12 @@
   });
   go(0);
 })();
+
+/* hero photos: if an image file is not uploaded yet, keep only its caption + source link */
+document.querySelectorAll('.photos img').forEach(function(img){
+  function miss(){ img.closest('figure').classList.add('missing'); }
+  if (img.complete && !img.naturalWidth) miss(); else img.addEventListener('error', miss);
+});
 
 /* ---- YouTube clip player ----
    <div class="yt" data-id="VIDEO_ID" data-start="10" data-end="22" data-cap="Play"></div>
