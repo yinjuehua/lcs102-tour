@@ -23,10 +23,12 @@ body{background:var(--navy-2);color:var(--ink);font-family:var(--serif);
 .tour > *{position:relative;z-index:2}
 
 /* ---- header: kicker, title, story tag ---- */
-.t-head{padding:12px 22px 8px}
-.brand{font-family:var(--sans);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);
-  font-weight:600;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid rgba(201,162,75,.14)}
-.brand span{display:block;font-weight:400;letter-spacing:.1em;color:var(--muted);font-size:9.5px;margin-top:2px;text-transform:none}
+.t-head{padding:12px 22px 8px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.h-main{min-width:0;flex:1}
+.brand{flex:0 1 auto;max-width:200px;text-align:right;font-family:var(--sans);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--brass);font-weight:600;padding-top:1px}
+.brand span{display:block;font-weight:400;letter-spacing:.04em;color:var(--muted);font-size:9.5px;line-height:1.35;margin-top:3px;text-transform:none}
+@media (max-width:460px){.brand span{display:none}}
 .kicker{font-family:var(--sans);font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;
   color:var(--brass);margin:0 0 6px}
 .t-title{font-size:clamp(20px,4.6vw,27px);line-height:1.08;font-weight:600;margin:0 0 9px;color:var(--ink)}

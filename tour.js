@@ -24,10 +24,12 @@
   var hasHead = a('kicker') || a('title');
   var head = document.createElement('div'); head.className = 't-head';
   head.innerHTML =
-    '<div class="brand">' + BRAND + '<span>' + BRAND_SUB + '</span></div>' +
-    (a('kicker') ? '<div class="kicker">' + esc(a('kicker')) + '</div>' : '') +
-    (a('title')  ? '<h1 class="t-title">' + esc(a('title')) + '</h1>' : '') +
-    '<span class="story"></span>';
+    '<div class="h-main">' +
+      (a('kicker') ? '<div class="kicker">' + esc(a('kicker')) + '</div>' : '') +
+      (a('title')  ? '<h1 class="t-title">' + esc(a('title')) + '</h1>' : '') +
+      '<span class="story"></span>' +
+    '</div>' +
+    '<div class="brand">' + BRAND + '<span>' + BRAND_SUB + '</span></div>';
   if (hasHead) tour.appendChild(head);
   var tagEl = head.querySelector('.story');
   function setStory(s){
