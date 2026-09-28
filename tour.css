@@ -1,0 +1,53 @@
+/* LCS-102 tour pager: shared style for every page.
+   Change colors/sizes here once and every page updates. */
+:root{
+  --navy:#081320; --navy-2:#050b14;
+  --ink:#ece4d2; --ink-soft:#c7bfae; --muted:#93a0ad;
+  --brass:#c9a24b; --brass-lite:#e6cf8f; --line:rgba(201,162,75,.28);
+  --fleet:#7fa7c9; --ship:#e6cf8f;
+  --serif:"Iowan Old Style","Palatino Linotype",Georgia,"Times New Roman",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --body-size:clamp(14px,3.6vw,17px);   /* main text size */
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--navy-2);color:var(--ink);font-family:var(--serif);
+  -webkit-font-smoothing:antialiased;overflow:hidden}
+
+.tour{position:fixed;inset:0;display:flex;flex-direction:column;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(201,162,75,.16) 0%, rgba(0,0,0,0) 55%),
+    linear-gradient(180deg,var(--navy) 0%,var(--navy-2) 100%)}
+.tour::after{content:"";position:absolute;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 120px 20px rgba(0,0,0,.7)}
+
+/* top: story label */
+.t-head{position:relative;z-index:2;padding:16px 22px 6px}
+.story{display:inline-block;font-family:var(--sans);font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;padding:3px 9px;border-radius:4px;border:1px solid}
+.story.fleet{color:var(--fleet);border-color:rgba(127,167,201,.5);background:rgba(127,167,201,.1)}
+.story.ship{color:var(--ship);border-color:var(--line);background:rgba(201,162,75,.12)}
+.story.both{color:var(--ink-soft);border-color:rgba(147,160,173,.4);background:rgba(147,160,173,.1)}
+
+/* middle: text pages */
+.t-body{position:relative;z-index:2;flex:1;min-height:0;overflow-y:auto;padding:8px 22px 10px}
+.page{display:none;opacity:0;transform:translateY(10px);transition:opacity .45s ease,transform .45s ease}
+.page.on{display:block}
+.page.in{opacity:1;transform:none}
+.page h2{font-size:clamp(20px,5vw,28px);line-height:1.1;font-weight:600;margin:0 0 10px;color:var(--ink)}
+.page p{font-size:var(--body-size);line-height:1.58;color:var(--ink-soft);margin:0 0 12px;max-width:40em}
+.page p.lead{color:var(--brass-lite);font-size:calc(var(--body-size) + 3px)}
+.page p.cta{font-family:var(--sans);font-size:calc(var(--body-size) - 2px);color:var(--muted);
+  border-left:2px solid var(--line);padding:4px 10px}
+
+/* bottom: dots + buttons */
+.t-foot{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:10px 22px 14px;border-top:1px solid rgba(201,162,75,.14);font-family:var(--sans)}
+.dots{display:flex;gap:8px;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;border:1px solid var(--line);background:transparent;
+  cursor:pointer;padding:0;transition:all .3s}
+.dot.on{background:var(--brass);border-color:var(--brass);box-shadow:0 0 10px rgba(201,162,75,.7)}
+button.move{font-family:var(--sans);background:transparent;color:var(--ink);border:1px solid var(--line);
+  border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;transition:all .25s}
+button.move:hover:not(:disabled){border-color:var(--brass);color:var(--brass-lite)}
+button.move:disabled{opacity:.3;cursor:default}
