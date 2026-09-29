@@ -163,7 +163,15 @@
     dots.querySelectorAll('.dot').forEach(function(d, k){ d.classList.toggle('on', k === i); });
     prev.disabled = i === 0;
     var last = i === pages.length - 1;
-    next.disabled = last;
+    var nextPanel = null;
+    if (last && typeof panels !== 'undefined' && panels.length) {
+      var cur = pages[i].closest('.panel'), k = panels.indexOf(cur);
+      if (k > -1 && k < panels.length - 1) nextPanel = panels[k + 1];
+    }
+    next.disabled = last && !nextPanel;
+    next.textContent = nextPanel ? nextPanel.getAttribute('data-tab') + ' \u203a' : 'Next \u203a';
+    next.classList.toggle('to-tab', !!nextPanel);
+    next._toPanel = nextPanel;
     if (nextStop) { next.style.display = last ? 'none' : ''; nextStop.style.display = last ? '' : 'none'; }
     body.scrollTop = 0;
     tour.classList.toggle('media-mode', pages[i].classList.contains('video-only'));
@@ -171,7 +179,7 @@
     pages.forEach(function(p, k){ if (k !== i) p.querySelectorAll('.yt,.mp4').forEach(function(v){ v._stop && v._stop(); }); });
   }
   prev.onclick = function(){ go(i - 1); };
-  next.onclick = function(){ go(i + 1); };
+  next.onclick = function(){ if (next._toPanel) { showTab(next._toPanel.id); try { history.replaceState(null, '', '#' + next._toPanel.id); } catch(e){} } else go(i + 1); };
   document.addEventListener('keydown', function(e){
     if (e.key === 'ArrowRight') go(i + 1);
     if (e.key === 'ArrowLeft') go(i - 1);

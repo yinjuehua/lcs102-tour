@@ -297,3 +297,4 @@ p.ref-src{margin:0 0 2px}
 .bigfacts:has(.rich){grid-auto-columns:auto}
 .bigfacts:has(.rich) .bf:first-child{padding:2px 18px}
 .panel > .mp4{width:min(100%, calc(52vh * 16 / 9));margin:4px auto 0}
+.move.to-tab{border-color:var(--brass);color:var(--brass-lite);background:rgba(201,162,75,.14)}
