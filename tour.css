@@ -298,3 +298,11 @@ p.ref-src{margin:0 0 2px}
 .bigfacts:has(.rich) .bf:first-child{padding:2px 18px}
 .panel > .mp4{width:min(100%, calc(52vh * 16 / 9));margin:4px auto 0}
 .move.to-tab{border-color:var(--brass);color:var(--brass-lite);background:rgba(201,162,75,.14)}
+
+/* plaque extras: story caption, dates, single-fact plaques */
+.bf-cap{flex:1 1 100%;text-align:center;font-family:var(--sans);font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin:-4px 0 8px}
+.bf.date .bf-pre{font-family:var(--serif);font-variant:small-caps;text-transform:lowercase;font-style:normal;letter-spacing:.2em;color:var(--brass);font-size:12px;height:auto;margin-bottom:4px}
+.bf.date .bf-num{font-size:clamp(22px,5.6vw,32px);font-style:italic}
+.bf.date:not(.last) .bf-num{color:var(--ink)}
+.bigfacts .bf:only-child:not(.date) .bf-num{font-size:clamp(34px,9vw,52px)}
+.bigfacts:not(:has(.bf + .bf)) .bf .bf-lab{font-size:15px}

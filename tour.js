@@ -48,13 +48,26 @@
       (a('fact') ? '<div class="fact"><div class="lab">Milestone fact</div><div class="factval">' + esc(a('fact')) + '</div></div>' : '');
     tour.appendChild(strip);
     // data-fact-style="big": show the fact as large stat tiles ("130 ships | About 10,000 sailors | One intact ship")
-    if (a('fact-style') === 'big' && a('fact')) {
+    if (a('fact-style') !== 'plain' && a('fact')) {
       var parts = a('fact').split('|').map(function(x){ return x.trim(); });
       var box = document.createElement('div'); box.className = 'bigfacts';
+      // a leading story label ("Fleet story" / "LCS-102 story") becomes a small caption above the plaque
+      if (/^(Fleet story|LCS-102 story)$/i.test(parts[0])) {
+        var cap = document.createElement('div'); cap.className = 'bf-cap'; cap.textContent = parts.shift(); box._cap = cap;
+      }
+      var MONTH = '(January|February|March|April|May|June|July|August|September|October|November|December)';
+      var reDate = new RegExp('^(.*?)\\s*(' + MONTH + '\\s+\\d{1,2}(,\\s*\\d{4})?)$');
       parts.forEach(function(p, k){
-        var m = p.match(/^(About\s+)?([\d,]+|One)\s+(.*)$/i);
+        var m = p.match(/^(About\s+)?([\d,]+|One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten)\s+(.*)$/i);
+        var d = !m && p.match(reDate);
         var el = document.createElement('div'); el.className = 'bf' + (k === parts.length - 1 ? ' last' : '');
-        if (!m) {
+        if (d) {
+          // e.g. "Commissioned February 17, 1945" / "Arrived June 18" -> small label + big date
+          el.classList.add('date');
+          el.innerHTML = '<div class="bf-pre"></div><div class="bf-num"></div>';
+          el.querySelector('.bf-pre').textContent = d[1] || '\u00a0';
+          el.querySelector('.bf-num').textContent = d[2];
+        } else if (!m) {
           // e.g. "Assigned crew: 6 officers and 65 enlisted sailors" -> small label + text with big numbers
           var c = p.indexOf(':'), pre = c > -1 ? p.slice(0, c) : '', rest = c > -1 ? p.slice(c + 1).trim() : p;
           el.classList.add('rich');
@@ -83,6 +96,7 @@
         box.appendChild(el);
       });
       var fe = strip.querySelector('.fact'); if (fe) fe.remove();
+      if (box._cap) strip.appendChild(box._cap);
       strip.appendChild(box);
     }
   }
