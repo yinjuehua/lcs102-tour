@@ -54,7 +54,19 @@
       parts.forEach(function(p, k){
         var m = p.match(/^(About\s+)?([\d,]+|One)\s+(.*)$/i);
         var el = document.createElement('div'); el.className = 'bf' + (k === parts.length - 1 ? ' last' : '');
-        if (!m) { el.innerHTML = '<div class="bf-num"></div>'; el.firstChild.textContent = p; }
+        if (!m) {
+          // e.g. "Assigned crew: 6 officers and 65 enlisted sailors" -> small label + text with big numbers
+          var c = p.indexOf(':'), pre = c > -1 ? p.slice(0, c) : '', rest = c > -1 ? p.slice(c + 1).trim() : p;
+          el.classList.add('rich');
+          el.innerHTML = '<div class="bf-pre"></div><div class="bf-rich"></div>';
+          el.querySelector('.bf-pre').textContent = pre || '\u00a0';
+          var rich = el.querySelector('.bf-rich');
+          rest.split(/(\d[\d,]*)/).forEach(function(bit){
+            if (!bit) return;
+            var sp = document.createElement('span'); sp.textContent = bit;
+            if (/^\d/.test(bit)) sp.className = 'bf-n'; rich.appendChild(sp);
+          });
+        }
         else {
           el.innerHTML = '<div class="bf-pre"></div><div class="bf-num"></div><div class="bf-lab"></div>';
           el.querySelector('.bf-pre').textContent = m[1] ? m[1].trim() : '\u00a0';
@@ -88,30 +100,33 @@
 
   // body
   var body = document.createElement('div'); body.className = 't-body';
-  pages.forEach(function(p){ body.appendChild(p); });
-  tour.appendChild(body);
-
-  // tabs: <section class="panel" id="history" data-tab="History"> ... ; open one directly with #history
   var panels = Array.prototype.slice.call(tour.querySelectorAll('.panel'));
+  if (panels.length) panels.forEach(function(p){ body.appendChild(p); });   // pages stay inside their panel
+  else pages.forEach(function(p){ body.appendChild(p); });
+  tour.appendChild(body);
+  var storyOn = true, onTab = function(){};
+
+  // tabs: <section class="panel" id="story" data-tab="The story"> ... ; open one directly with #id
   if (panels.length) {
     var tabs = document.createElement('div'); tabs.className = 't-tabs';
     panels.forEach(function(p){
-      body.appendChild(p);
       var t = document.createElement('button'); t.className = 'tab'; t.type = 'button';
       t.textContent = p.getAttribute('data-tab'); t.onclick = function(){ showTab(p.id); history.replaceState(null, '', '#' + p.id); };
       tabs.appendChild(t);
     });
     tour.insertBefore(tabs, body);
-    function showTab(id){
+    var showTab = function(id){
       var found = panels.some(function(p){ return p.id === id; }); if (!found) id = panels[0].id;
       panels.forEach(function(p, k){
         var on = p.id === id; p.classList.toggle('on', on); tabs.children[k].classList.toggle('on', on);
         if (!on) p.querySelectorAll('.yt,.mp4').forEach(function(v){ v._stop && v._stop(); });
+        if (on) storyOn = !!p.querySelector('.page');
       });
+      tour.classList.toggle('alt-tab', !storyOn);
       body.scrollTop = 0;
-    }
-    // opened from one ThingLink icon (#history etc.): show only that category
-    if (location.hash && panels.some(function(p){ return '#' + p.id === location.hash; })) tour.classList.add('single');
+      onTab();
+    };
+    if (location.hash && !tour.querySelector('.panel .page') && panels.some(function(p){ return '#' + p.id === location.hash; })) tour.classList.add('single');
     showTab(location.hash.slice(1));
     window.addEventListener('hashchange', function(){ showTab(location.hash.slice(1)); });
   }
@@ -138,7 +153,9 @@
   });
   if (pages.length < 2 && !nextStop) foot.style.display = 'none';
 
+  onTab = function(){ foot.style.display = storyOn ? '' : 'none'; tour.classList.toggle('media-mode', storyOn && pages[i].classList.contains('video-only')); };
   function go(n){
+    if (!storyOn) return;
     if (n < 0 || n > pages.length - 1) return;
     i = n;
     pages.forEach(function(p, k){ p.classList.toggle('on', k === i); p.classList.remove('in'); });
@@ -167,7 +184,7 @@
     if (Math.abs(dx) > 40) go(dx < 0 ? i + 1 : i - 1);
     x0 = null;
   });
-  go(0);
+  go(0); onTab();
 })();
 
 /* Then and now timeline: tap a step to highlight it (first step starts highlighted) */

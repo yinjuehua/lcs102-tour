@@ -284,3 +284,16 @@ p.ref-src{margin:0 0 2px}
   box-shadow:0 0 18px rgba(201,162,75,.4);animation:tapPulse 2s ease-in-out infinite}
 @keyframes tapPulse{50%{box-shadow:0 0 28px rgba(201,162,75,.7)}}
 @media (prefers-reduced-motion:reduce){.mp4-tap{animation:none}}
+
+/* ---- one embed per stop: tabs above, story pager inside the first tab ---- */
+.tour.alt-tab .t-strip{display:none}
+.panel .page{}
+.t-tabs .tab{font-size:11px;padding:5px 10px}
+
+.bf.rich{display:flex;flex-direction:column;justify-content:center}
+.bf.rich .bf-pre{font-family:var(--serif);font-variant:small-caps;text-transform:lowercase;font-style:normal;letter-spacing:.2em;color:var(--brass);font-size:12px;height:auto;margin-bottom:4px}
+.bf-rich{font-family:var(--serif);font-size:13px;letter-spacing:.06em;color:var(--ink-soft);line-height:1.2}
+.bf-rich .bf-n{font-size:clamp(26px,7vw,40px);color:var(--brass-lite);font-style:italic;margin:0 3px;vertical-align:-4px;text-shadow:0 0 14px rgba(230,207,143,.35)}
+.bigfacts:has(.rich){grid-auto-columns:auto}
+.bigfacts:has(.rich) .bf:first-child{padding:2px 18px}
+.panel > .mp4{width:min(100%, calc(52vh * 16 / 9));margin:4px auto 0}
