@@ -83,7 +83,7 @@
   // pages that contain a video: hide title/counter while shown; video-only pages fill the frame
   pages.forEach(function(p){
     var kids = Array.prototype.filter.call(p.children, function(el){ return el.nodeType === 1; });
-    if (kids.length === 1 && kids[0].classList.contains('yt')) p.classList.add('video-only');
+    if (kids.length === 1 && (kids[0].classList.contains('yt') || kids[0].classList.contains('mp4'))) p.classList.add('video-only');
   });
 
   // body
@@ -303,7 +303,8 @@ document.querySelectorAll('.frame').forEach(function(f){ f.appendChild(window.to
     var v = document.createElement('video');
     v.src = box.getAttribute('data-src'); v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'metadata';
     if (box.getAttribute('data-poster')) v.poster = box.getAttribute('data-poster');
-    var auto = box.hasAttribute('data-autoplay'); if (auto) { v.muted = true; v.setAttribute('muted', ''); }
+    var auto = box.hasAttribute('data-autoplay'), withSound = box.getAttribute('data-autoplay') === 'sound', once = box.hasAttribute('data-once'), done = false;
+    if (auto && !withSound) { v.muted = true; v.setAttribute('muted', ''); }
     var start = parseFloat(box.getAttribute('data-start')) || 0, end = parseFloat(box.getAttribute('data-end'));
     box.appendChild(v);
     var bar = document.createElement('div'); bar.className = 'mp4-bar';
@@ -319,9 +320,26 @@ document.querySelectorAll('.frame').forEach(function(f){ f.appendChild(window.to
     v.addEventListener('timeupdate', function(){ if (!isNaN(end) && v.currentTime >= end) { v.pause(); v.currentTime = start; } });
     v.addEventListener('loadedmetadata', function(){ if (start) v.currentTime = start; });
     box._stop = function(){ v.pause(); };
+    v.addEventListener('ended', function(){ done = true; });
+    // autoplay: try with sound; if the browser blocks it, play muted and show a big "Tap for sound" button
+    var tap = null;
+    function autoGo(){
+      if (v.currentTime < start || (!isNaN(end) && v.currentTime >= end)) v.currentTime = start;
+      var p = v.play();
+      if (p && p.catch) p.catch(function(){
+        v.muted = true; var p2 = v.play(); if (p2 && p2.catch) p2.catch(function(){});
+        if (withSound && !tap) {
+          tap = document.createElement('button'); tap.type = 'button'; tap.className = 'mp4-tap'; tap.textContent = '🔊 Tap for sound';
+          tap.onclick = function(e){ e.stopPropagation(); v.muted = false; if (v.paused) go(); tap.remove(); tap = null; };
+          box.appendChild(tap);
+        }
+        ui();
+      });
+    }
+    v.addEventListener('volumechange', function(){ if (!v.muted && tap) { tap.remove(); tap = null; } });
     if ('IntersectionObserver' in window) {
-      new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting) { if (auto) go(); } else v.pause(); }); }, {threshold: .4}).observe(box);
-    } else if (auto) go();
+      new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting) { if (auto && !(once && done)) autoGo(); } else v.pause(); }); }, {threshold: .4}).observe(box);
+    } else if (auto) autoGo();
     ui();
   });
 })();

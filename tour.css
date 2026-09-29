@@ -96,7 +96,7 @@ body{background:var(--navy-2);color:var(--ink);font-family:var(--serif);
 .tour.media-mode .t-head,.tour.media-mode .t-strip{display:none}
 .tour.media-mode .t-body{padding:10px 12px 8px;container-type:size;overflow:hidden}
 .page.video-only.on{height:100%;display:flex;align-items:center;justify-content:center}
-.page.video-only .yt{margin:0;width:min(100cqw, calc(100cqh * 16 / 9))}
+.page.video-only .yt,.page.video-only .mp4{margin:0;width:min(100cqw, calc(100cqh * 16 / 9))}
 .tour.media-mode .t-foot{padding:8px 14px 10px}
 
 /* ---- cards (stops 8, 11) ---- */
@@ -278,3 +278,9 @@ p.ref-src{margin:0 0 2px}
 .yt:fullscreen,.mp4:fullscreen,.frame:fullscreen{width:100vw;height:100vh;max-width:none;aspect-ratio:auto;border:0;border-radius:0;margin:0;background:#000}
 .yt:-webkit-full-screen,.mp4:-webkit-full-screen,.frame:-webkit-full-screen{width:100vw;height:100vh;max-width:none;border:0;border-radius:0;background:#000}
 .page .mp4{width:min(100%, calc(42vh * 16 / 9));margin-left:auto;margin-right:auto}
+
+.mp4-tap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;font-family:var(--sans);font-size:14px;letter-spacing:.06em;
+  color:var(--brass-lite);background:rgba(5,11,20,.78);border:1px solid var(--brass);border-radius:999px;padding:11px 20px;cursor:pointer;
+  box-shadow:0 0 18px rgba(201,162,75,.4);animation:tapPulse 2s ease-in-out infinite}
+@keyframes tapPulse{50%{box-shadow:0 0 28px rgba(201,162,75,.7)}}
+@media (prefers-reduced-motion:reduce){.mp4-tap{animation:none}}
