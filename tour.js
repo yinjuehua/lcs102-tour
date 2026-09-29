@@ -106,7 +106,7 @@
       var found = panels.some(function(p){ return p.id === id; }); if (!found) id = panels[0].id;
       panels.forEach(function(p, k){
         var on = p.id === id; p.classList.toggle('on', on); tabs.children[k].classList.toggle('on', on);
-        if (!on) p.querySelectorAll('.yt').forEach(function(v){ v._stop && v._stop(); });
+        if (!on) p.querySelectorAll('.yt,.mp4').forEach(function(v){ v._stop && v._stop(); });
       });
       body.scrollTop = 0;
     }
@@ -151,7 +151,7 @@
     body.scrollTop = 0;
     tour.classList.toggle('media-mode', pages[i].classList.contains('video-only'));
     setStory(pages[i].getAttribute('data-story') || story);
-    pages.forEach(function(p, k){ if (k !== i) p.querySelectorAll('.yt').forEach(function(v){ v._stop && v._stop(); }); });
+    pages.forEach(function(p, k){ if (k !== i) p.querySelectorAll('.yt,.mp4').forEach(function(v){ v._stop && v._stop(); }); });
   }
   prev.onclick = function(){ go(i - 1); };
   next.onclick = function(){ go(i + 1); };
@@ -242,6 +242,7 @@ document.querySelectorAll('.photos img').forEach(function(img){
       box.insertBefore(holder, cover);
       var shield = document.createElement('div'); shield.className = 'yt-shield'; box.appendChild(shield);
       var pbtn = document.createElement('button'); pbtn.className = 'yt-pause'; pbtn.type = 'button'; pbtn.textContent = 'Pause'; box.appendChild(pbtn);
+      box.appendChild(window.tourFsButton(box));
 
       whenReady(function(){
         var vars = { autoplay:1, controls:0, disablekb:1, fs:0, rel:0, iv_load_policy:3,
@@ -274,5 +275,53 @@ document.querySelectorAll('.photos img').forEach(function(img){
       }
       shield.onclick = toggle; pbtn.onclick = toggle;
     };
+  });
+})();
+
+
+/* ---- fullscreen button (shared by YouTube, MP4 and embedded frames) ---- */
+window.tourFsButton = function(box, video){
+  var b = document.createElement('button'); b.type = 'button'; b.className = 'fs-btn'; b.setAttribute('aria-label', 'Full screen');
+  b.innerHTML = '<span class="fs-in">⤢ Full screen</span><span class="fs-out">⤡ Exit full screen</span>';
+  b.addEventListener('click', function(e){
+    e.stopPropagation();
+    var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    if (fsEl) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+    var req = box.requestFullscreen || box.webkitRequestFullscreen;
+    if (req) { var r = req.call(box); if (r && r.catch) r.catch(function(){ if (video && video.webkitEnterFullscreen) video.webkitEnterFullscreen(); }); }
+    else if (video && video.webkitEnterFullscreen) video.webkitEnterFullscreen();   // iPhone Safari
+  });
+  return b;
+};
+document.querySelectorAll('.frame').forEach(function(f){ f.appendChild(window.tourFsButton(f)); });
+
+/* ---- MP4 player: <div class="mp4" data-src="videos/x.mp4" data-autoplay data-start="0" data-end="12"></div>
+   Autoplay starts muted (browsers only allow muted autoplay); tap "Sound on" for audio.
+   Plays when its page is shown, pauses when the visitor pages away. ---- */
+(function(){
+  document.querySelectorAll('.mp4[data-src]').forEach(function(box){
+    var v = document.createElement('video');
+    v.src = box.getAttribute('data-src'); v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'metadata';
+    if (box.getAttribute('data-poster')) v.poster = box.getAttribute('data-poster');
+    var auto = box.hasAttribute('data-autoplay'); if (auto) { v.muted = true; v.setAttribute('muted', ''); }
+    var start = parseFloat(box.getAttribute('data-start')) || 0, end = parseFloat(box.getAttribute('data-end'));
+    box.appendChild(v);
+    var bar = document.createElement('div'); bar.className = 'mp4-bar';
+    var play = document.createElement('button'); play.type = 'button'; play.className = 'mp4-btn';
+    var snd = document.createElement('button'); snd.type = 'button'; snd.className = 'mp4-btn';
+    bar.appendChild(play); bar.appendChild(snd); bar.appendChild(window.tourFsButton(box, v)); box.appendChild(bar);
+    function ui(){ play.textContent = v.paused ? '▶ Play' : '❚❚ Pause'; snd.textContent = v.muted ? '🔇 Sound on' : '🔊 Sound off'; box.classList.toggle('paused', v.paused); }
+    function go(){ if (v.currentTime < start || (!isNaN(end) && v.currentTime >= end)) v.currentTime = start; var p = v.play(); if (p && p.catch) p.catch(function(){ ui(); }); }
+    play.onclick = function(e){ e.stopPropagation(); v.paused ? go() : v.pause(); };
+    snd.onclick = function(e){ e.stopPropagation(); v.muted = !v.muted; if (!v.muted && v.paused) go(); ui(); };
+    v.addEventListener('click', function(){ v.paused ? go() : v.pause(); });
+    ['play','pause','volumechange'].forEach(function(ev){ v.addEventListener(ev, ui); });
+    v.addEventListener('timeupdate', function(){ if (!isNaN(end) && v.currentTime >= end) { v.pause(); v.currentTime = start; } });
+    v.addEventListener('loadedmetadata', function(){ if (start) v.currentTime = start; });
+    box._stop = function(){ v.pause(); };
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function(es){ es.forEach(function(e){ if (e.isIntersecting) { if (auto) go(); } else v.pause(); }); }, {threshold: .4}).observe(box);
+    } else if (auto) go();
+    ui();
   });
 })();

@@ -197,7 +197,7 @@ p.ref-src{margin:0 0 2px}
 
 /* ---- big milestone fact (data-fact-style="big"): museum plaque ---- */
 .t-strip:has(.bigfacts) .ctr{display:none}
-.bigfacts{flex:1 1 100%;display:grid;grid-template-columns:repeat(3,1fr);margin:4px 0 2px;padding:12px 0 10px;
+.bigfacts{flex:1 1 100%;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;margin:4px 0 2px;padding:12px 0 10px;
   border-top:1px solid var(--brass);border-bottom:1px solid var(--brass);position:relative}
 .bigfacts::before,.bigfacts::after{content:"";position:absolute;left:0;right:0;height:1px;background:rgba(201,162,75,.35)}
 .bigfacts::before{top:3px} .bigfacts::after{bottom:3px}
@@ -257,3 +257,24 @@ p.ref-src{margin:0 0 2px}
 .mm-rule{width:70px;height:1px;background:linear-gradient(90deg,transparent,var(--brass),transparent);margin:8px 0}
 @keyframes mmIn{from{opacity:0;letter-spacing:.5em}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.mm-line{animation:none;opacity:1}}
+
+/* ---- MP4 player + fullscreen ---- */
+.mp4{position:relative;width:100%;aspect-ratio:16/9;background:#000;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin:0 0 14px;
+  box-shadow:0 20px 40px -24px #000}
+.mp4 video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;cursor:pointer}
+.mp4-bar{position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:6px;justify-content:flex-end;z-index:3;opacity:0;transition:opacity .25s}
+.mp4:hover .mp4-bar,.mp4.paused .mp4-bar,.mp4:focus-within .mp4-bar{opacity:1}
+@media (hover:none){.mp4-bar{opacity:1}}
+.mp4-btn,.fs-btn{font-family:var(--sans);font-size:11px;color:var(--ink);background:rgba(5,11,20,.7);border:1px solid var(--line);
+  border-radius:4px;padding:5px 9px;cursor:pointer}
+.mp4-btn:hover,.fs-btn:hover{border-color:var(--brass);color:var(--brass-lite)}
+.yt .fs-btn{position:absolute;right:70px;bottom:8px;z-index:4;opacity:0;transition:opacity .25s}
+.yt:hover .fs-btn,.yt.paused .fs-btn{opacity:1}
+@media (hover:none){.yt .fs-btn{opacity:1}}
+.frame .fs-btn{position:absolute;right:8px;top:8px;z-index:4}
+.fs-out{display:none}
+:fullscreen .fs-in,:-webkit-full-screen .fs-in{display:none}
+:fullscreen .fs-out,:-webkit-full-screen .fs-out{display:inline}
+.yt:fullscreen,.mp4:fullscreen,.frame:fullscreen{width:100vw;height:100vh;max-width:none;aspect-ratio:auto;border:0;border-radius:0;margin:0;background:#000}
+.yt:-webkit-full-screen,.mp4:-webkit-full-screen,.frame:-webkit-full-screen{width:100vw;height:100vh;max-width:none;border:0;border-radius:0;background:#000}
+.page .mp4{width:min(100%, calc(42vh * 16 / 9));margin-left:auto;margin-right:auto}
