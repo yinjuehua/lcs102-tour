@@ -194,3 +194,50 @@ p.ref-src{margin:0 0 2px}
   .tl-item{padding:0}
   .tl-item::before{top:-26px}
 }
+
+/* ---- big milestone fact (data-fact-style="big"): museum plaque ---- */
+.t-strip:has(.bigfacts) .ctr{display:none}
+.bigfacts{flex:1 1 100%;display:grid;grid-template-columns:repeat(3,1fr);margin:4px 0 2px;padding:12px 0 10px;
+  border-top:1px solid var(--brass);border-bottom:1px solid var(--brass);position:relative}
+.bigfacts::before,.bigfacts::after{content:"";position:absolute;left:0;right:0;height:1px;background:rgba(201,162,75,.35)}
+.bigfacts::before{top:3px} .bigfacts::after{bottom:3px}
+.bf{text-align:center;padding:2px 8px;opacity:0;animation:bfIn .9s ease forwards}
+.bf + .bf{border-left:1px solid rgba(201,162,75,.4)}
+.bf:nth-child(2){animation-delay:.3s} .bf:nth-child(3){animation-delay:1.8s}
+.bf-pre{font-family:var(--serif);font-style:italic;font-size:11px;color:var(--muted);height:14px;letter-spacing:.04em}
+.bf-num{font-family:var(--serif);font-size:clamp(30px,8.5vw,46px);line-height:1;color:var(--ink);font-variant-numeric:lining-nums tabular-nums;
+  font-weight:400;letter-spacing:.02em}
+.bf-lab{font-family:var(--serif);font-variant:small-caps;font-size:13px;letter-spacing:.2em;color:var(--brass);margin-top:5px;text-transform:lowercase}
+.bf.last .bf-num{color:var(--brass-lite);font-style:italic;text-shadow:0 0 18px rgba(230,207,143,.45)}
+.bf.last .bf-lab{color:var(--brass-lite)}
+@keyframes bfIn{from{opacity:0;letter-spacing:.3em}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.bf{animation:none;opacity:1}}
+
+/* ---- flip plaques (stop 8) ---- */
+.plaques{display:grid;grid-template-columns:1fr 1fr;gap:14px;perspective:1100px}
+@media (max-width:520px){.plaques{grid-template-columns:1fr}}
+.plaque{all:unset;display:block;cursor:pointer;min-height:230px;position:relative;height:100%}
+.plaque:focus-visible{outline:2px solid var(--brass-lite);outline-offset:4px;border-radius:6px}
+.pl-in{display:grid;position:relative;width:100%;height:100%;min-height:230px;transition:transform .9s cubic-bezier(.3,.7,.2,1);transform-style:preserve-3d}
+.plaque.on .pl-in{transform:rotateY(180deg)}
+.pl-face{grid-area:1/1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  padding:22px 18px;border-radius:6px;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background:
+    radial-gradient(120% 90% at 30% 15%, rgba(255,240,200,.35), rgba(255,240,200,0) 45%),
+    linear-gradient(145deg,#b8903f 0%,#e6cf8f 22%,#a07a2e 48%,#d9b86a 70%,#8a6522 100%);
+  box-shadow:inset 0 0 0 2px rgba(60,40,10,.55),inset 0 0 0 6px rgba(255,235,180,.35),inset 0 0 0 7px rgba(60,40,10,.5),
+    0 18px 30px -14px #000,0 2px 0 rgba(255,255,255,.15)}
+.pl-face::before,.pl-face::after{content:"";position:absolute;width:9px;height:9px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fff4d0,#8a6522 60%,#4a3410);top:12px;left:12px;
+  box-shadow:calc(100% + 0px) 0 0 transparent}
+.pl-face::after{left:auto;right:12px}
+.pl-lab{font-family:var(--serif);font-variant:small-caps;text-transform:lowercase;letter-spacing:.24em;font-size:12.5px;color:#3b2a0c;
+  text-shadow:0 1px 0 rgba(255,245,215,.6)}
+.pl-name{font-family:var(--serif);font-size:clamp(24px,5.5vw,30px);font-weight:600;color:#2a1d07;margin:10px 0 8px;line-height:1.1;
+  text-shadow:0 1px 0 rgba(255,245,215,.7),0 -1px 0 rgba(0,0,0,.25)}
+.pl-name::before,.pl-name::after{content:"";display:block;width:60px;height:1px;background:rgba(59,42,12,.55);margin:8px auto}
+.pl-hint{font-family:var(--sans);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(59,42,12,.7)}
+.pl-back{transform:rotateY(180deg);justify-content:flex-start}
+.pl-back .pl-lab{font-size:11px;margin-bottom:10px}
+.pl-txt{font-family:var(--serif);font-size:14.5px;line-height:1.55;color:#24190a;text-shadow:0 1px 0 rgba(255,245,215,.5)}
+@media (prefers-reduced-motion:reduce){.pl-in{transition:none}}

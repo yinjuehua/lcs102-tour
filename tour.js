@@ -47,6 +47,32 @@
       (a('ships') ? '<div class="ctr"><span class="lab">Ships of the class:</span> <span class="num">' + esc(a('ships')) + '</span><span class="sub">130 built · 1 intact today</span></div>' : '') +
       (a('fact') ? '<div class="fact"><div class="lab">Milestone fact</div><div class="factval">' + esc(a('fact')) + '</div></div>' : '');
     tour.appendChild(strip);
+    // data-fact-style="big": show the fact as large stat tiles ("130 ships | About 10,000 sailors | One intact ship")
+    if (a('fact-style') === 'big' && a('fact')) {
+      var parts = a('fact').split('|').map(function(x){ return x.trim(); });
+      var box = document.createElement('div'); box.className = 'bigfacts';
+      parts.forEach(function(p, k){
+        var m = p.match(/^(About\s+)?([\d,]+|One)\s+(.*)$/i);
+        var el = document.createElement('div'); el.className = 'bf' + (k === parts.length - 1 ? ' last' : '');
+        if (!m) { el.innerHTML = '<div class="bf-num"></div>'; el.firstChild.textContent = p; }
+        else {
+          el.innerHTML = '<div class="bf-pre"></div><div class="bf-num"></div><div class="bf-lab"></div>';
+          el.querySelector('.bf-pre').textContent = m[1] ? m[1].trim() : '\u00a0';
+          el.querySelector('.bf-lab').textContent = m[3];
+          var numEl = el.querySelector('.bf-num'), raw = m[2];
+          if (/^[\d,]+$/.test(raw)) {
+            var target = parseInt(raw.replace(/,/g, ''), 10), t0 = null, dur = 1400 + k * 300;
+            numEl.textContent = '0';
+            var step = function(t){ if (!t0) t0 = t; var q = Math.min(1, (t - t0) / dur); q = 1 - Math.pow(1 - q, 3);
+              numEl.textContent = Math.round(target * q).toLocaleString('en-US'); if (q < 1) requestAnimationFrame(step); };
+            if (matchMedia('(prefers-reduced-motion: reduce)').matches) numEl.textContent = raw; else requestAnimationFrame(step);
+          } else numEl.textContent = raw;
+        }
+        box.appendChild(el);
+      });
+      var fe = strip.querySelector('.fact'); if (fe) fe.remove();
+      strip.appendChild(box);
+    }
   }
 
   // top-level video (outside the pages) sits above the text
@@ -158,6 +184,11 @@ document.querySelectorAll('.tl').forEach(function(tl){
     });
   });
   pick(0);
+});
+
+/* flip plaques: tap to turn over */
+document.querySelectorAll('.plaque').forEach(function(p){
+  p.addEventListener('click', function(){ var on = p.classList.toggle('on'); p.setAttribute('aria-pressed', on ? 'true' : 'false'); });
 });
 
 /* hero photos: if an image file is not uploaded yet, keep only its caption + source link */
