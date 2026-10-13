@@ -279,7 +279,7 @@ document.querySelectorAll('.photos img').forEach(function(img){
 
 /* ---- YouTube clip player ----
    <div class="yt" data-id="VIDEO_ID" data-start="10" data-end="22" data-cap="Play"></div>
-   - no YouTube controls / progress bar, keyboard disabled
+   - native YouTube controls stay clickable, including Skip ad
    - stops itself at data-end (or just before the video's real end) and shows our Replay card,
      so YouTube's end screen with suggested videos never appears                               */
 (function(){
@@ -309,7 +309,7 @@ document.querySelectorAll('.photos img').forEach(function(img){
       activation++; // Cancel an API callback queued before the visitor navigated away.
       clearInterval(timer); timer = null;
       if (player) { try { player.destroy(); } catch(e){} player = null; }
-      box.querySelectorAll('.yt-frame,.yt-shield,.yt-pause,.fs-btn').forEach(function(el){ el.remove(); });
+      box.querySelectorAll('.yt-frame').forEach(function(el){ el.remove(); });
       box.classList.remove('paused');
       cover.classList.toggle('replay', !!replay);
       cover.querySelector('.yt-cap').textContent = replay ? 'Replay' : cap;
@@ -322,13 +322,9 @@ document.querySelectorAll('.photos img').forEach(function(img){
       cover.style.display = 'none';
       var holder = document.createElement('div'); holder.className = 'yt-frame'; holder.id = 'yt-' + n + '-' + Date.now();
       box.insertBefore(holder, cover);
-      var shield = document.createElement('div'); shield.className = 'yt-shield'; box.appendChild(shield);
-      var pbtn = document.createElement('button'); pbtn.className = 'yt-pause'; pbtn.type = 'button'; pbtn.textContent = 'Pause'; box.appendChild(pbtn);
-      box.appendChild(window.tourFsButton(box));
-
       whenReady(function(){
         if (currentActivation !== activation) return;
-        var vars = { autoplay:1, controls:0, disablekb:1, fs:0, rel:0, iv_load_policy:3,
+        var vars = { autoplay:1, controls:1, disablekb:0, fs:1, rel:0, iv_load_policy:3,
                      playsinline:1, cc_load_policy:0, start: Math.floor(start) };
         if (!isNaN(endAttr)) vars.end = Math.ceil(endAttr);
         player = new YT.Player(holder.id, {
@@ -349,22 +345,16 @@ document.querySelectorAll('.photos img').forEach(function(img){
               if (currentActivation !== activation) return;
               if (e.data === 0) showCover(true);                     // ended
               box.classList.toggle('paused', e.data === 2);
-              pbtn.textContent = e.data === 2 ? 'Play' : 'Pause';
             }
           }
         });
       });
-      function toggle(){
-        if (!player || !player.getPlayerState) return;
-        player.getPlayerState() === 1 ? player.pauseVideo() : player.playVideo();
-      }
-      shield.onclick = toggle; pbtn.onclick = toggle;
     };
   });
 })();
 
 
-/* ---- fullscreen button (shared by YouTube, MP4 and embedded frames) ---- */
+/* ---- fullscreen button (MP4 and embedded frames; YouTube uses native controls) ---- */
 window.tourFsButton = function(box, video){
   var b = document.createElement('button'); b.type = 'button'; b.className = 'fs-btn'; b.setAttribute('aria-label', 'Full screen');
   b.innerHTML = '<span class="fs-in">⤢ Full screen</span><span class="fs-out">⤡ Exit full screen</span>';
