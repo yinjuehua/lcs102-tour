@@ -7,7 +7,7 @@
      data-label    override the tag text
      data-ships    ship counter number              e.g. "130"
      data-fact     milestone fact line
-     data-next     URL of the next stop (shows a "Next stop" button on the last page)
+     data-next     URL of the next stop (shown after every page and topic)
      data-next-label  button text (default "Next stop")                              */
 (function(){
   var tour = document.querySelector('.tour'); if (!tour) return;
@@ -17,7 +17,6 @@
   var pages = Array.prototype.slice.call(tour.querySelectorAll('.page'));
   var story = a('story') || '';
   var names = {fleet:'Fleet story', ship:'LCS-102 story', both:'Fleet story and LCS-102 story'};
-  var label = a('label') || names[story] || story;
 
   // header (S-HDR brand line, kicker, title, story tag)
   var BRAND = 'USS LCS-102', BRAND_SUB = 'The last intact ship of her class, and the fleet she stands for';
@@ -118,40 +117,67 @@
   if (panels.length) panels.forEach(function(p){ body.appendChild(p); });   // pages stay inside their panel
   else pages.forEach(function(p){ body.appendChild(p); });
   tour.appendChild(body);
-  var storyOn = true, onTab = function(){};
-
-  // tabs: <section class="panel" id="story" data-tab="The story"> ... ; open one directly with #id
+  // One ordered route: each panel's pages, or one step for a panel without pages.
+  // Both the tabs and the bottom controls use this same position.
+  var steps = [];
   if (panels.length) {
-    var tabs = document.createElement('div'); tabs.className = 't-tabs';
-    panels.forEach(function(p){
+    panels.forEach(function(panel){
+      var panelPages = pages.filter(function(page){ return page.closest('.panel') === panel; });
+      if (panelPages.length) panelPages.forEach(function(page, k){
+        steps.push({panel:panel, page:page, pageIndex:k, pageCount:panelPages.length});
+      });
+      else steps.push({panel:panel, page:null, pageIndex:0, pageCount:0});
+    });
+  } else pages.forEach(function(page, k){
+    steps.push({panel:null, page:page, pageIndex:k, pageCount:pages.length});
+  });
+  if (!steps.length) return;
+
+  var i = 0, tabs = null;
+  function firstStep(id){
+    var k = steps.findIndex(function(step){ return step.panel && step.panel.id === id; });
+    return k < 0 ? 0 : k;
+  }
+  function hashId(){
+    try { return decodeURIComponent(location.hash.slice(1)); } catch(e) { return ''; }
+  }
+
+  // Tabs remain available even when a standalone reference embed opens with #id.
+  if (panels.length) {
+    tabs = document.createElement('div'); tabs.className = 't-tabs';
+    tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Topics');
+    panels.forEach(function(p, k){
       var t = document.createElement('button'); t.className = 'tab'; t.type = 'button';
-      t.textContent = p.getAttribute('data-tab'); t.onclick = function(){ showTab(p.id); history.replaceState(null, '', '#' + p.id); };
+      t.id = 'tour-tab-' + k; t.textContent = p.getAttribute('data-tab');
+      t.setAttribute('role', 'tab'); t.setAttribute('aria-controls', p.id);
+      p.setAttribute('role', 'tabpanel'); p.setAttribute('aria-labelledby', t.id);
+      t.onclick = function(){ if (steps[i].panel !== p) go(firstStep(p.id), true); };
+      t.addEventListener('keydown', function(e){
+        var n = k;
+        if (e.key === 'ArrowRight') n = (k + 1) % panels.length;
+        else if (e.key === 'ArrowLeft') n = (k + panels.length - 1) % panels.length;
+        else if (e.key === 'Home') n = 0;
+        else if (e.key === 'End') n = panels.length - 1;
+        else return;
+        e.preventDefault(); e.stopPropagation();
+        go(firstStep(panels[n].id), true); tabs.children[n].focus();
+      });
       tabs.appendChild(t);
     });
     tour.insertBefore(tabs, body);
-    var showTab = function(id){
-      var found = panels.some(function(p){ return p.id === id; }); if (!found) id = panels[0].id;
-      panels.forEach(function(p, k){
-        var on = p.id === id; p.classList.toggle('on', on); tabs.children[k].classList.toggle('on', on);
-        if (!on) p.querySelectorAll('.yt,.mp4').forEach(function(v){ v._stop && v._stop(); });
-        if (on) storyOn = !!p.querySelector('.page');
-      });
-      tour.classList.toggle('alt-tab', !storyOn);
-      body.scrollTop = 0;
-      onTab();
-    };
-    if (location.hash && !tour.querySelector('.panel .page') && panels.some(function(p){ return '#' + p.id === location.hash; })) tour.classList.add('single');
-    showTab(location.hash.slice(1));
-    window.addEventListener('hashchange', function(){ showTab(location.hash.slice(1)); });
+    window.addEventListener('hashchange', function(){ go(firstStep(hashId()), false); });
   }
-  if (!pages.length) return;
 
-  // footer
-  var foot = document.createElement('div'); foot.className = 't-foot';
-  foot.innerHTML = '<button class="move" id="prev">\u2039 Back</button><div class="dots"></div><span id="nextwrap"><button class="move" id="next">Next \u203a</button></span>';
+  // Fixed bottom navigation is present throughout stories, topics and video pages.
+  var foot = document.createElement('nav'); foot.className = 't-foot';
+  foot.setAttribute('aria-label', 'Section navigation');
+  foot.innerHTML = '<button type="button" class="move" id="prev">\u2039 Previous</button>' +
+    '<div class="nav-status" role="status" aria-live="polite" aria-atomic="true"><div class="nav-label"></div><div class="nav-progress"></div><div class="nav-hint"></div></div>' +
+    '<span id="nextwrap"><button type="button" class="move" id="next">Next \u203a</button></span>';
   tour.appendChild(foot);
 
-  var dots = foot.querySelector('.dots'), prev = foot.querySelector('#prev'), next = foot.querySelector('#next'), i = 0;
+  var prev = foot.querySelector('#prev'), next = foot.querySelector('#next');
+  var navLabel = foot.querySelector('.nav-label'), progress = foot.querySelector('.nav-progress'), hint = foot.querySelector('.nav-hint');
   var nextStop = null;
   if (a('next')) {
     nextStop = document.createElement('a');
@@ -160,53 +186,68 @@
     nextStop.style.display = 'none';
     foot.querySelector('#nextwrap').appendChild(nextStop);
   }
-  pages.forEach(function(_, k){
-    var d = document.createElement('button'); d.className = 'dot';
-    d.setAttribute('aria-label', 'Page ' + (k + 1)); d.onclick = function(){ go(k); };
-    dots.appendChild(d);
-  });
-  if (pages.length < 2 && !nextStop) foot.style.display = 'none';
-
-  onTab = function(){ foot.style.display = storyOn ? '' : 'none'; tour.classList.toggle('media-mode', storyOn && pages[i].classList.contains('video-only')); };
-  function go(n){
-    if (!storyOn) return;
-    if (n < 0 || n > pages.length - 1) return;
+  function stepLabel(step){
+    var name = step.panel ? step.panel.getAttribute('data-tab') : (a('title') || 'This section');
+    return name + (step.pageCount > 1 ? ' \u00b7 ' + (step.pageIndex + 1) + ' of ' + step.pageCount : '');
+  }
+  function go(n, updateHash){
+    if (n < 0 || n >= steps.length) return;
     i = n;
-    pages.forEach(function(p, k){ p.classList.toggle('on', k === i); p.classList.remove('in'); });
-    requestAnimationFrame(function(){ requestAnimationFrame(function(){ pages[i].classList.add('in'); }); });
-    dots.querySelectorAll('.dot').forEach(function(d, k){ d.classList.toggle('on', k === i); });
+    var step = steps[i];
+    panels.forEach(function(p, k){
+      var on = p === step.panel; p.classList.toggle('on', on); p.hidden = !on;
+      tabs.children[k].classList.toggle('on', on);
+      tabs.children[k].setAttribute('aria-selected', on ? 'true' : 'false');
+      tabs.children[k].tabIndex = on ? 0 : -1;
+    });
+    pages.forEach(function(p){ p.classList.toggle('on', p === step.page); p.hidden = p !== step.page; p.classList.remove('in'); });
+    if (step.page) requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      if (steps[i] === step) step.page.classList.add('in');
+    }); });
+    tour.classList.toggle('alt-tab', !step.page);
+    tour.classList.toggle('media-mode', !!step.page && step.page.classList.contains('video-only'));
+    setStory(step.page ? (step.page.getAttribute('data-story') || story) : story);
     prev.disabled = i === 0;
-    var last = i === pages.length - 1;
-    var nextPanel = null;
-    if (last && typeof panels !== 'undefined' && panels.length) {
-      var cur = pages[i].closest('.panel'), k = panels.indexOf(cur);
-      if (k > -1 && k < panels.length - 1) nextPanel = panels[k + 1];
-    }
-    next.disabled = last && !nextPanel;
-    next.textContent = nextPanel ? nextPanel.getAttribute('data-tab') + ' \u203a' : 'Next \u203a';
-    next.classList.toggle('to-tab', !!nextPanel);
-    next._toPanel = nextPanel;
+    var last = i === steps.length - 1;
+    next.disabled = last;
+    navLabel.textContent = stepLabel(step); navLabel.title = navLabel.textContent;
+    progress.textContent = 'Step ' + (i + 1) + ' of ' + steps.length + (last ? ' \u00b7 End of this section' : '');
+    hint.textContent = last ? (nextStop ? 'Continue to the next stop' : 'Close this window to continue the tour') : 'Next: ' + stepLabel(steps[i + 1]);
+    prev.setAttribute('aria-label', i > 0 ? 'Previous: ' + stepLabel(steps[i - 1]) : 'Previous');
+    next.setAttribute('aria-label', last ? 'End of this section' : 'Next: ' + stepLabel(steps[i + 1]));
     if (nextStop) { next.style.display = last ? 'none' : ''; nextStop.style.display = last ? '' : 'none'; }
     body.scrollTop = 0;
-    tour.classList.toggle('media-mode', pages[i].classList.contains('video-only'));
-    setStory(pages[i].getAttribute('data-story') || story);
-    pages.forEach(function(p, k){ if (k !== i) p.querySelectorAll('.yt,.mp4').forEach(function(v){ v._stop && v._stop(); }); });
+    tour.querySelectorAll('.yt,.mp4').forEach(function(v){
+      var page = v.closest('.page'), panel = v.closest('.panel');
+      if ((page && page !== step.page) || (panel && panel !== step.panel)) v._stop && v._stop();
+    });
+    if (updateHash && step.panel && hashId() !== step.panel.id) {
+      try { history.replaceState(null, '', '#' + encodeURIComponent(step.panel.id)); } catch(e) {}
+    }
   }
-  prev.onclick = function(){ go(i - 1); };
-  next.onclick = function(){ if (next._toPanel) { showTab(next._toPanel.id); try { history.replaceState(null, '', '#' + next._toPanel.id); } catch(e){} } else go(i + 1); };
+  prev.onclick = function(){ go(i - 1, true); };
+  next.onclick = function(){ go(i + 1, true); };
+  function interactive(el){
+    return el.closest('button,a,input,textarea,select,video,[role="button"],[contenteditable="true"]');
+  }
   document.addEventListener('keydown', function(e){
-    if (e.key === 'ArrowRight') go(i + 1);
-    if (e.key === 'ArrowLeft') go(i - 1);
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || interactive(e.target)) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(i + 1, true); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(i - 1, true); }
   });
-  var x0 = null;
-  document.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, {passive:true});
-  document.addEventListener('touchend', function(e){
+  var x0 = null, y0 = null;
+  body.addEventListener('touchstart', function(e){
+    if (e.touches.length !== 1 || interactive(e.target)) { x0 = null; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+  }, {passive:true});
+  body.addEventListener('touchend', function(e){
     if (x0 === null) return;
-    var dx = e.changedTouches[0].clientX - x0;
-    if (Math.abs(dx) > 40) go(dx < 0 ? i + 1 : i - 1);
+    var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? i + 1 : i - 1, true);
     x0 = null;
-  });
-  go(0); onTab();
+  }, {passive:true});
+  body.addEventListener('touchcancel', function(){ x0 = null; }, {passive:true});
+  go(panels.length ? firstStep(hashId()) : 0, false);
 })();
 
 /* Then and now timeline: tap a step to highlight it (first step starts highlighted) */
@@ -262,20 +303,22 @@ document.querySelectorAll('.photos img').forEach(function(img){
     cover.querySelector('.yt-cap').textContent = cap;
     box.appendChild(cover);
 
-    var player = null, timer = null, stopAt = null;
+    var player = null, timer = null, stopAt = null, activation = 0;
 
     function showCover(replay){
+      activation++; // Cancel an API callback queued before the visitor navigated away.
       clearInterval(timer); timer = null;
       if (player) { try { player.destroy(); } catch(e){} player = null; }
-      box.querySelectorAll('.yt-frame,.yt-shield,.yt-pause').forEach(function(el){ el.remove(); });
+      box.querySelectorAll('.yt-frame,.yt-shield,.yt-pause,.fs-btn').forEach(function(el){ el.remove(); });
       box.classList.remove('paused');
       cover.classList.toggle('replay', !!replay);
       cover.querySelector('.yt-cap').textContent = replay ? 'Replay' : cap;
       cover.style.display = '';
     }
-    box._stop = function(){ if (player) showCover(true); };
+    box._stop = function(){ if (player || cover.style.display === 'none') showCover(true); };
 
     cover.onclick = function(){
+      var currentActivation = ++activation;
       cover.style.display = 'none';
       var holder = document.createElement('div'); holder.className = 'yt-frame'; holder.id = 'yt-' + n + '-' + Date.now();
       box.insertBefore(holder, cover);
@@ -284,6 +327,7 @@ document.querySelectorAll('.photos img').forEach(function(img){
       box.appendChild(window.tourFsButton(box));
 
       whenReady(function(){
+        if (currentActivation !== activation) return;
         var vars = { autoplay:1, controls:0, disablekb:1, fs:0, rel:0, iv_load_policy:3,
                      playsinline:1, cc_load_policy:0, start: Math.floor(start) };
         if (!isNaN(endAttr)) vars.end = Math.ceil(endAttr);
@@ -291,6 +335,7 @@ document.querySelectorAll('.photos img').forEach(function(img){
           videoId: id, host: 'https://www.youtube-nocookie.com', playerVars: vars,
           events: {
             onReady: function(e){
+              if (currentActivation !== activation) { e.target.destroy(); return; }
               if (start % 1) e.target.seekTo(start, true);
               var dur = e.target.getDuration() || 0;
               stopAt = !isNaN(endAttr) ? endAttr : (dur ? dur - 0.6 : null);
@@ -301,6 +346,7 @@ document.querySelectorAll('.photos img').forEach(function(img){
               }, 200);
             },
             onStateChange: function(e){
+              if (currentActivation !== activation) return;
               if (e.data === 0) showCover(true);                     // ended
               box.classList.toggle('paused', e.data === 2);
               pbtn.textContent = e.data === 2 ? 'Play' : 'Pause';
