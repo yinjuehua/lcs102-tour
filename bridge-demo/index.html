@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#132c2e">
+  <title>LCS-102 · The Bridge</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <canvas id="scene" aria-label="LCS-102 3D bridge scene. Drag to look around, or use W A S D to move within the marked area." tabindex="0"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+  <p class="demo-notice">Experimental demo · AI reconstruction</p>
+
+  <header class="topbar">
+    <a class="identity" href="#" id="home-link" aria-label="Return to the tour starting point">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M16 3v20M10 8h12M6 18c0 7 5 10 10 11 5-1 10-4 10-11M3 21l3-3 4 2m12 0 4-2 3 3"/></svg></span>
+      <span><span class="eyebrow">LANDING CRAFT SUPPORT</span><strong>LCS-102<span class="identity-divider">/</span>The Bridge</strong></span>
+    </a>
+    <nav class="tools" aria-label="Scene settings">
+      <button id="help-button" class="tool-button" aria-label="Open help" title="Help"><span aria-hidden="true">?</span></button>
+      <button id="review-button" class="tool-button" title="Record an issue for review"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V4m0 1h12l-2 4 2 4H5"/></svg><span class="tool-label">Review</span><span id="issue-count" hidden>0</span></button>
+      <button id="atmosphere-button" class="tool-button" aria-pressed="true" title="Toggle cinematic glare, window light and airborne dust"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4m0 10v4M3 12h4m10 0h4M5.6 5.6l2.8 2.8m7.2 7.2 2.8 2.8m0-12.8-2.8 2.8m-7.2 7.2-2.8 2.8"/></svg><span class="tool-label">Atmosphere</span></button>
+      <button id="restoration-button" class="tool-button" aria-pressed="false" title="Show inferred geometry for incomplete surfaces"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 6-6 4 4 6-6M4 20h16M7 13l-3 3m13-6 3-2"/></svg><span class="tool-label">Repairs</span></button>
+      <label class="quality-label"><span class="tool-label">Quality</span><select id="quality" aria-label="Rendering quality"><option value="low">Smooth</option><option value="standard" selected>Standard</option><option value="high">Sharp</option></select></label>
+      <button id="fullscreen-button" class="tool-button" aria-label="Enter fullscreen" title="Fullscreen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+    </nav>
+  </header>
+  <div id="repair-status" class="repair-status" role="status" hidden>Inferred surfaces · preview</div>
+
+  <main>
+    <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+      <div class="welcome-rule"></div>
+      <p class="eyebrow">01 — THE BRIDGE</p>
+      <h1 id="welcome-title">The bridge<span>Aboard LCS-102.</span></h1>
+      <p class="welcome-copy">Move slowly through the space.<br>Come closer to notice the details.</p>
+      <button id="enter-button" class="primary-button" disabled><span id="enter-label">Preparing the scene…</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></button>
+      <p class="welcome-note">Drag to look around · Select a marker for details</p>
+    </section>
+
+    <div id="hotspots" aria-label="Scene details" hidden></div>
+
+    <aside id="detail-panel" class="panel detail-panel" aria-labelledby="detail-title" hidden>
+      <button class="close-button" id="detail-close" aria-label="Close details">×</button>
+      <p class="eyebrow" id="detail-kicker">Bridge observation</p>
+      <h2 id="detail-title"></h2>
+      <div class="panel-rule"></div>
+      <p id="detail-body"></p>
+      <div id="detail-observation" class="observation"></div>
+      <button id="detail-view" class="text-button">Go to observation point <span aria-hidden="true">↗</span></button>
+    </aside>
+
+    <aside id="review-panel" class="panel review-panel" aria-labelledby="review-title" hidden>
+      <button class="close-button" id="review-close" aria-label="Close review">×</button>
+      <p class="eyebrow">SCENE REVIEW</p>
+      <h2 id="review-title">Leave a review note</h2>
+      <p class="muted">Pause at the area in question, then save a note. Reopening a note restores its view.</p>
+      <form id="issue-form">
+        <label for="issue-kind">Issue type</label>
+        <select id="issue-kind"><option value="geometry">Shape or missing surface</option><option value="artifact">Floating artifact</option><option value="navigation">Movement boundary</option><option value="content">Content or label</option></select>
+        <label for="issue-note">What needs attention?</label>
+        <textarea id="issue-note" required maxlength="600" rows="3" placeholder="For example: A gap appears on the right surface near the equipment."></textarea>
+        <button class="primary-button compact" type="submit">Save view and note <span aria-hidden="true">＋</span></button>
+      </form>
+      <div class="review-heading"><h3>Saved <span id="review-total">0</span></h3><button id="export-issues" class="text-button">Export JSON ↓</button></div>
+      <p class="muted" id="issues-empty">No issues saved yet. Notes stay in this browser.</p>
+      <ol id="issue-list"></ol>
+      <a class="text-button repair-download" href="./assets/lcs102-inferred-repairs.glb" download="lcs102-inferred-repairs.glb">Download inferred repair layer (.glb) ↓</a>
+    </aside>
+
+    <section id="help-panel" class="panel help-panel" aria-labelledby="help-title" hidden>
+      <button class="close-button" id="help-close" aria-label="Close help">×</button>
+      <p class="eyebrow">TAKE YOUR TIME</p><h2 id="help-title">Look closer, at your own pace</h2>
+      <dl class="control-list"><div><dt>Look around</dt><dd>Drag the scene, or use the arrow keys</dd></div><div><dt>Move slowly</dt><dd>Use W A S D, or the movement pad below</dd></div><div><dt>Change viewpoint</dt><dd>Select a viewpoint name at the bottom</dd></div><div><dt>See details</dt><dd>Select a numbered marker in the scene</dd></div><div><dt>Return to start</dt><dd>Press Home, or select the title at top left</dd></div></dl>
+      <p class="fine-print">This preview is based on a single panorama, so some forms still need review. Movement uses a simplified boundary rather than measured collision data. Repairs show surfaces inferred from visible form, not measured restoration. Independent prototype; not an official museum website.</p>
+    </section>
+  </main>
+
+  <footer id="tour-bar" class="tour-bar" hidden>
+    <div class="location"><span class="location-dot"></span><div><span class="eyebrow">Current position</span><span id="location-name">Panorama origin</span></div></div>
+    <nav id="waypoints" class="waypoints" aria-label="Viewpoints"></nav>
+    <div class="footer-tools"><button id="hotspot-toggle" class="text-button" aria-pressed="true">Hide markers</button><button id="reset-button" class="icon-reset" aria-label="Return to start" title="Return to start">↺</button></div>
+  </footer>
+
+  <div id="movement-pad" class="movement-pad" aria-label="Movement controls" hidden>
+    <button data-move="forward" aria-label="Move forward">↑</button><button data-move="left" aria-label="Move left">←</button><button data-move="back" aria-label="Move backward">↓</button><button data-move="right" aria-label="Move right">→</button>
+  </div>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <div id="loading" class="loading-status" role="status"><span class="loading-dot"></span><span id="loading-text">Loading the bridge scene</span><span id="loading-percent"></span></div>
+  <div id="fatal-error" class="fatal-error" role="alert" hidden><h2>The scene could not open</h2><p id="error-message"></p><button id="retry-button" class="primary-button">Reload</button></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
