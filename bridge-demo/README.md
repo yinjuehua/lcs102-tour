@@ -2,30 +2,23 @@
 
 [Open the online demo](https://yinjuehua.github.io/lcs102-tour/bridge-demo/)
 
-`bridge-demo/` is an independent experimental demo of an AI-assisted reconstruction of the LCS-102 bridge. It is a prototype for viewing and testing, not an official museum website, institutional publication, measured survey, or complete reconstruction.
+This page is an independent experimental demo of an AI-assisted reconstruction of the LCS-102 bridge. It is a prototype for viewing and testing, not an official museum website, institutional publication, measured survey, or complete reconstruction.
 
 ## What is included
 
-The static app uses PlayCanvas 2.23.3 and includes an approximate point-cloud scene, viewpoints, visual observations, navigation, atmosphere controls, and an optional **Repairs** layer. A sea-and-sky sphere surrounds the cabin behind transparent glass; a reversible splat filter removes the captured exterior instead of covering indoor objects with window images. The circular door porthole is emphasized as the main sunlight source. Gentle camera sway can be disabled in Help; Help also provides an original-exterior comparison. The scenic environment is generated and is not historical evidence. The point cloud is derived from a single 360° image, so occlusion, stretching, missing surfaces, and local geometry remain approximate. The observations are visual notes, not verified historical or technical claims.
+The static app uses PlayCanvas 2.23.3 and includes an approximate point-cloud scene, three viewpoints (Origin, Framework, Table Exhibits), visual observations, navigation, and atmosphere controls. The point cloud is derived from a single 360° image, so occlusion, stretching, missing surfaces, and local geometry remain approximate. The observations are visual notes, not verified historical or technical claims.
 
-The **Repairs** layer contains surfaces inferred from visible form. It is not measured restoration, a complete cabin model, or evidence that the original surfaces looked that way.
+- **Exterior**: a generated sea-and-sky sphere surrounds the cabin behind transparent glass. A reversible splat filter removes the captured exterior instead of covering indoor objects with window images. Help → Advanced settings offers an original-exterior comparison. The scenic environment is not historical evidence.
+- **Light**: one low sun enters through the aft windows behind the table. The captured room receives it through a baked, inferred sun-visibility volume, which gives the table its dappled light. The door porthole is soft skylight. Volumetric fog limited to the cabin shows light shafts, airborne motes glow inside them, and a hover spotlight highlights objects.
+- **Camera and image**: depth of field with autofocus, bloom, soft chromatic fringing, vignette, and gentle camera sway (can be disabled in Help). Quality starts on Smooth on touch-first or low-power devices and steps down automatically if the frame rate stays low; choosing a quality yourself turns this off.
+- **Exhibits**: a compass (ChickenHatMan, CC BY 4.0) and a sextant (Happymiel4, CC BY 4.0) are demonstration models, not artifacts from LCS-102. The binoculars open a binocular sea view with a generic WWII-style reticle. The door opens and closes.
+- **Clay view** (Help → Advanced settings) shows the room in plain gray to read form, light, and shadow.
 
-The scenic preview includes a dark inferred cap beneath the captured deck to prevent sea showing through missing floor surfaces. The sea has mild optical defocus and mirrored panorama wrapping. Window glow is reduced to half its previous emitted strength; camera-aligned lens ghosts fade with visible light sources, and 440 airborne motes drift through the cabin. These are presentation choices, not recovered source detail.
+The dark cap beneath the captured deck, the olive backing below the window sills, the baked lighting, and the scenic exterior are presentation choices, not recovered source detail.
 
-Review notes are not sent to a server by this static app. They stay in this browser's `localStorage` and can be exported as JSON from the Review panel. Clearing browser or site data can remove local notes.
+The Review notes and Repairs layer from the earlier version are hidden in this version.
 
-The first load is approximately 11 MB. Use a modern browser with WebGL2 enabled.
-
-## Local preview and edits
-
-This copied `bridge-demo/` directory runs without npm or a build step:
-
-```bash
-cd bridge-demo
-python3 -m http.server 8000
-```
-
-Open <http://127.0.0.1:8000/> in a modern WebGL2 browser. The static files are directly editable; for example, change `app.js`, `tour-data.js`, or `style.css`, then reload the page to inspect the result.
+The first load is approximately 23 MB (the two exhibit models add about 11.5 MB). Use a modern browser with WebGL2 enabled.
 
 ## Asset rights
 

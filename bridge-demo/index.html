@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#132c2e">
   <title>LCS-102 · The Bridge</title>
-  <link rel="stylesheet" href="./style.css?v=20261028-polish">
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
   <canvas id="scene" aria-label="LCS-102 3D bridge scene. Drag to look around, or use W A S D to move within the marked area." tabindex="0"></canvas>
@@ -19,9 +19,8 @@
     </a>
     <nav class="tools" aria-label="Scene settings">
       <button id="help-button" class="tool-button" aria-label="Open help" title="Help"><span aria-hidden="true">?</span></button>
-      <button id="review-button" class="tool-button" title="Record an issue for review"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V4m0 1h12l-2 4 2 4H5"/></svg><span class="tool-label">Review</span><span id="issue-count" hidden>0</span></button>
-      <button id="atmosphere-button" class="tool-button" aria-pressed="true" title="Toggle cinematic glare, window light and airborne dust"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4m0 10v4M3 12h4m10 0h4M5.6 5.6l2.8 2.8m7.2 7.2 2.8 2.8m0-12.8-2.8 2.8m-7.2 7.2-2.8 2.8"/></svg><span class="tool-label">Atmosphere</span></button>
-      <button id="restoration-button" class="tool-button" aria-pressed="false" title="Show inferred geometry for incomplete surfaces"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 6-6 4 4 6-6M4 20h16M7 13l-3 3m13-6 3-2"/></svg><span class="tool-label">Repairs</span></button>
+      <button id="review-button" class="tool-button" hidden title="Record an issue for review"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V4m0 1h12l-2 4 2 4H5"/></svg><span class="tool-label">Review</span><span id="issue-count" hidden>0</span></button>
+      <button id="restoration-button" class="tool-button" hidden aria-pressed="false" title="Show inferred geometry for incomplete surfaces"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 6-6 4 4 6-6M4 20h16M7 13l-3 3m13-6 3-2"/></svg><span class="tool-label">Repairs</span></button>
       <label class="quality-label"><span class="tool-label">Quality</span><select id="quality" aria-label="Rendering quality"><option value="low">Smooth</option><option value="standard" selected>Standard</option><option value="high">Sharp</option></select></label>
       <button id="fullscreen-button" class="tool-button" aria-label="Enter fullscreen" title="Fullscreen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
     </nav>
@@ -71,26 +70,96 @@
     <section id="help-panel" class="panel help-panel" aria-labelledby="help-title" hidden>
       <button class="close-button" id="help-close" aria-label="Close help">×</button>
       <p class="eyebrow">TAKE YOUR TIME</p><h2 id="help-title">Look closer, at your own pace</h2>
-      <dl class="control-list"><div><dt>Look around</dt><dd>Drag the scene, or use the arrow keys</dd></div><div><dt>Move slowly</dt><dd>Use W A S D, or the movement pad below</dd></div><div><dt>Change viewpoint</dt><dd>Select a viewpoint name at the bottom</dd></div><div><dt>See details</dt><dd>Select a numbered marker in the scene</dd></div><div><dt>Return to start</dt><dd>Press Home, or select the title at top left</dd></div></dl>
-      <label class="window-option"><input type="checkbox" id="ocean-windows" checked><span>Ocean &amp; glass window preview</span></label>
-      <p class="muted">Sea and sky surround the cabin beyond the glass. Turn this off to compare the captured exterior.</p>
-      <label class="window-option"><input type="checkbox" id="sea-motion" checked><span>Gentle sea motion</span></label>
+      <dl class="control-list"><div><dt>Look around</dt><dd>Drag the scene, or use the arrow keys</dd></div><div><dt>Move slowly</dt><dd>Use W A S D, or the on-screen controls below</dd></div><div><dt>Change viewpoint</dt><dd>Select a viewpoint name at the bottom</dd></div><div><dt>See details</dt><dd>Select a numbered marker in the scene</dd></div><div><dt>Return to start</dt><dd>Press Home, or select the title at top left</dd></div></dl>
+      <p class="eyebrow help-controls-title">ON-SCREEN CONTROLS</p>
+    <div id="movement-pad" class="movement-pad" aria-label="Move and look controls" hidden>
+      <div class="control-group" aria-label="Move">
+        <span class="control-group-label">Move</span>
+        <div class="control-buttons">
+          <button data-move="forward" aria-label="Move forward"><span aria-hidden="true">W</span></button>
+          <button data-move="left" aria-label="Move left"><span aria-hidden="true">A</span></button>
+          <button data-move="back" aria-label="Move backward"><span aria-hidden="true">S</span></button>
+          <button data-move="right" aria-label="Move right"><span aria-hidden="true">D</span></button>
+        </div>
+      </div>
+      <div class="control-group" aria-label="Look">
+        <span class="control-group-label">Look</span>
+        <div class="control-buttons">
+          <button data-look="up" aria-label="Look up"><span aria-hidden="true">↑</span></button>
+          <button data-look="left" aria-label="Look left"><span aria-hidden="true">←</span></button>
+          <button data-look="down" aria-label="Look down"><span aria-hidden="true">↓</span></button>
+          <button data-look="right" aria-label="Look right"><span aria-hidden="true">→</span></button>
+        </div>
+      </div>
+    </div>
+      <details class="advanced-settings">
+        <summary>Advanced settings</summary>
+        <div class="advanced-settings-body">
+          <button id="atmosphere-button" class="tool-button advanced-atmosphere" aria-pressed="true" title="Toggle cinematic glare, window light and airborne dust"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4m0 10v4M3 12h4m10 0h4M5.6 5.6l2.8 2.8m7.2 7.2 2.8 2.8m0-12.8-2.8 2.8m-7.2 7.2-2.8 2.8"/></svg><span class="tool-label">Atmosphere</span></button>
+          <label class="window-option"><input type="checkbox" id="ocean-windows" checked><span>Ocean &amp; glass window preview</span></label>
+          <p class="muted">Sea and sky surround the cabin beyond the glass. Turn this off to compare the captured exterior.</p>
+          <label class="window-option"><input type="checkbox" id="sea-motion" checked><span>Gentle sea motion</span></label>
+          <label class="window-option"><input type="checkbox" id="hard-daylight" checked><span>Extra daylight &amp; shadows</span></label>
+          <p class="muted">Sunlight from outside the cabin, with shadows baked from the reconstruction onto the room and model exhibits.</p>
+          <label class="window-option"><input type="checkbox" id="clay-view"><span>Clay view (no textures)</span></label>
+          <p class="muted">Shows the room and exhibits in plain gray so form, light and shadow are easier to read.</p>
+        </div>
+      </details>
+      <div id="local-exhibit-controls" class="local-exhibit-controls" hidden>
+        <p class="eyebrow">ADD TO THE TABLE</p>
+        <h3>Add a 3D exhibit (GLB)</h3>
+        <p class="muted">Choose a GLB model from this device to preview it and place it beside the bridge equipment.</p>
+        <label class="file-picker" for="exhibit-model-file"><span>Choose GLB file</span><span aria-hidden="true">＋</span></label>
+        <input id="exhibit-model-file" type="file" accept=".glb,model/gltf-binary" hidden>
+        <p id="exhibit-file-name" class="file-name" role="status">Choose a GLB file from this device.</p>
+        <label for="exhibit-name">Display name <span class="optional">(optional)</span></label>
+        <input id="exhibit-name" class="local-exhibit-input" type="text" maxlength="80" placeholder="For example, Deck equipment">
+        <label for="exhibit-description">Description <span class="optional">(optional)</span></label>
+        <textarea id="exhibit-description" class="local-exhibit-input" maxlength="420" rows="3" placeholder="What should visitors notice?"></textarea>
+        <button id="exhibit-add-button" class="primary-button compact" type="button" disabled>Preview and add exhibit <span aria-hidden="true">＋</span></button>
+        <p id="exhibit-model-status" class="fine-print" role="status" aria-live="polite">The file stays on this device.</p>
+      </div>
       <p class="fine-print">This preview is based on a single panorama, so some forms still need review. Movement uses a simplified boundary rather than measured collision data. Repairs show surfaces inferred from visible form, not measured restoration. Independent prototype; not an official museum website.</p>
     </section>
   </main>
 
+  <section id="exhibit-dialog" class="exhibit-dialog" role="dialog" aria-modal="true" aria-labelledby="exhibit-title" aria-hidden="true" hidden>
+    <div class="exhibit-scrim" data-exhibit-dismiss aria-hidden="true"></div>
+    <div class="exhibit-card" role="document" tabindex="-1">
+      <button class="close-button" id="exhibit-close" aria-label="Close exhibit details">×</button>
+      <p class="eyebrow" id="exhibit-kicker">BRIDGE DETAIL</p>
+      <div class="exhibit-layout">
+        <div class="exhibit-visual" aria-live="polite">
+          <div id="exhibit-visual-icon" class="exhibit-visual-icon" aria-hidden="true"></div>
+          <div id="exhibit-model-placeholder" class="exhibit-model-placeholder" hidden>3D exhibit</div>
+          <div id="exhibit-preview-wrap" class="exhibit-preview-wrap" hidden>
+            <canvas id="exhibit-preview-canvas" aria-label="Rotating 3D exhibit preview"></canvas>
+            <p id="exhibit-preview-status" class="preview-status" role="status">Preparing the 3D preview…</p>
+          </div>
+        </div>
+        <div class="exhibit-copy">
+          <h2 id="exhibit-title">Bridge exhibit</h2>
+          <div class="panel-rule"></div>
+          <p id="exhibit-body"></p>
+          <div id="exhibit-observation" class="observation"></div>
+          <p id="exhibit-source" class="exhibit-source"></p>
+          <div id="exhibit-door-controls" class="exhibit-door-controls" hidden>
+            <button id="exhibit-door-toggle" class="text-button" type="button" aria-pressed="false">Open door</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <footer id="tour-bar" class="tour-bar" hidden>
     <div class="location"><span class="location-dot"></span><div><span class="eyebrow">Current position</span><span id="location-name">Panorama origin</span></div></div>
     <nav id="waypoints" class="waypoints" aria-label="Viewpoints"></nav>
-    <div class="footer-tools"><button id="hotspot-toggle" class="text-button" aria-pressed="true">Hide markers</button><button id="reset-button" class="icon-reset" aria-label="Return to start" title="Return to start">↺</button></div>
+    <div class="footer-tools"><div id="objects-slot" class="objects-slot"></div><button id="hotspot-toggle" class="text-button" aria-pressed="true">Hide markers</button><button id="reset-button" class="icon-reset" aria-label="Return to start" title="Return to start">↺</button></div>
   </footer>
 
-  <div id="movement-pad" class="movement-pad" aria-label="Movement controls" hidden>
-    <button data-move="forward" aria-label="Move forward">↑</button><button data-move="left" aria-label="Move left">←</button><button data-move="back" aria-label="Move backward">↓</button><button data-move="right" aria-label="Move right">→</button>
-  </div>
   <div id="toast" role="status" aria-live="polite" hidden></div>
   <div id="loading" class="loading-status" role="status"><span class="loading-dot"></span><span id="loading-text">Loading the bridge scene</span><span id="loading-percent"></span></div>
   <div id="fatal-error" class="fatal-error" role="alert" hidden><h2>The scene could not open</h2><p id="error-message"></p><button id="retry-button" class="primary-button">Reload</button></div>
-  <script type="module" src="./app.js?v=20261028-polish"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

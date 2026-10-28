@@ -1,0 +1,6 @@
+Vintage Sextant
+Author: Happymiel4
+Author profile: https://sketchfab.com/Happymiel4
+Source: https://sketchfab.com/3d-models/vintage-sextant-39a7bf5a9da94c2c9ca2d9a34d71435f
+License: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/
+The source GLB is unchanged. Placement, scale, lighting and exhibit presentation are adapted in the tour runtime. This model is not identified as a historical LCS-102 artifact.

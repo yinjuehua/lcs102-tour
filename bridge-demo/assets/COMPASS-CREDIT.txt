@@ -1,0 +1,6 @@
+Dieselpunk Compass
+Author: ChickenHatMan
+Author profile: https://sketchfab.com/ChickenHatMan
+Source: https://sketchfab.com/3d-models/dieselpunk-compass-bb037e54992e49438e67268f016c2a54
+License: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/
+The source GLB is unchanged. Placement, scale, lighting and exhibit presentation are adapted in the tour runtime. This stylized object is not identified as a historical LCS-102 artifact.
