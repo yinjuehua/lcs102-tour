@@ -1,14 +1,15 @@
 import * as pc from './vendor/playcanvas.mjs';
 import { sceneTransform, waypoints, hotspots, navigation, issueKinds } from './tour-data.js';
 import { clamp, allowedMove, angleDelta, validateIssue } from './navigation.js';
-import { createAtmosphere } from './atmosphere.js';
+import { createAtmosphere } from './atmosphere.js?v=20261027-windows';
 import { createRepairs } from './repairs.js';
+import { createWindows } from './windows.js?v=20261027-windows';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('scene');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const STORAGE_KEY = 'ship-bridge-review-v1';
-let app, camera, atmosphere, repairs, entered = false, loaded = false, fatal = false;
+let app, camera, atmosphere, repairs, oceanWindows, entered = false, loaded = false, fatal = false;
 let yaw = waypoints[0].yaw, pitch = waypoints[0].pitch, fov = 65;
 let activeWaypoint = 'origin', flight = null, activeDetail = null, showHotspots = true;
 const keys = new Set(), heldMovement = new Set();
@@ -158,7 +159,11 @@ function bindInterface() {
     if(!atmosphere) return;
     const enabled=atmosphere.setEnabled(!atmosphere.enabled);
     $('atmosphere-button').setAttribute('aria-pressed',String(enabled));
-    toast(enabled?'Atmosphere on: subtle bloom, color and dust.':'Original scene rendering. Atmosphere off.');
+    toast(enabled?'Fading in cinematic light and floating dust.':'Fading out the atmosphere.');
+  });
+  $('ocean-windows').addEventListener('change', () => {
+    if (!oceanWindows) return;
+    oceanWindows.setEnabled($('ocean-windows').checked);
   });
   $('restoration-button').addEventListener('click', () => {
     if(!repairs) return;
@@ -275,6 +280,10 @@ function updateCamera(dt) {
     }
   }
   camera.setEulerAngles(pitch,yaw,0);
+  // Read-only virtual camera pose for reproducible aperture calibration.
+  const p=camera.getPosition();
+  const view=[p.x,p.y,p.z,yaw,pitch,fov].map(value=>Number(value.toFixed(4))).join(',');
+  if(canvas.dataset.view!==view) canvas.dataset.view=view;
 }
 
 const projected = new pc.Vec3(), toMarker = new pc.Vec3();
@@ -311,6 +320,14 @@ async function start() {
     bridge.addComponent('gsplat',{asset}); app.root.addChild(bridge);
     repairs=createRepairs(pc,app);
     try {
+      oceanWindows=await createWindows(pc,app,camera,{reducedMotion});
+      oceanWindows.setEnabled($('ocean-windows').checked);
+    } catch(windowError) {
+      console.warn('Scenic windows unavailable; keeping original exterior.',windowError);
+      $('ocean-windows').checked=false;
+      $('ocean-windows').disabled=true;
+    }
+    try {
       atmosphere=createAtmosphere(pc,app,camera,{reducedMotion});
     } catch(effectError) {
       console.warn('Atmosphere unavailable; using original rendering.',effectError);
@@ -319,7 +336,7 @@ async function start() {
       $('atmosphere-button').title='Atmosphere is unavailable on this graphics device';
     }
     bindNavigation();
-    app.on('update',dt=>{updateCamera(dt);updateMarkers();atmosphere?.update(dt);});
+    app.on('update',dt=>{updateCamera(dt);updateMarkers();oceanWindows?.update(dt);atmosphere?.update(dt);});
     app.graphicsDevice.on('devicelost',()=>{toast('Graphics were interrupted. Waiting for the device to recover.');});
     window.addEventListener('resize',()=>setQuality($('quality').value));
     app.start();

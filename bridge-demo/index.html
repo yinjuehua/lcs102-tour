@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#132c2e">
   <title>LCS-102 · The Bridge</title>
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=20261027-windows">
 </head>
 <body>
   <canvas id="scene" aria-label="LCS-102 3D bridge scene. Drag to look around, or use W A S D to move within the marked area." tabindex="0"></canvas>
@@ -72,6 +72,8 @@
       <button class="close-button" id="help-close" aria-label="Close help">×</button>
       <p class="eyebrow">TAKE YOUR TIME</p><h2 id="help-title">Look closer, at your own pace</h2>
       <dl class="control-list"><div><dt>Look around</dt><dd>Drag the scene, or use the arrow keys</dd></div><div><dt>Move slowly</dt><dd>Use W A S D, or the movement pad below</dd></div><div><dt>Change viewpoint</dt><dd>Select a viewpoint name at the bottom</dd></div><div><dt>See details</dt><dd>Select a numbered marker in the scene</dd></div><div><dt>Return to start</dt><dd>Press Home, or select the title at top left</dd></div></dl>
+      <label class="window-option"><input type="checkbox" id="ocean-windows" checked><span>Ocean &amp; glass window preview</span></label>
+      <p class="muted">A scenic sea and sky replaces the captured exterior. Turn this off to compare the original view.</p>
       <p class="fine-print">This preview is based on a single panorama, so some forms still need review. Movement uses a simplified boundary rather than measured collision data. Repairs show surfaces inferred from visible form, not measured restoration. Independent prototype; not an official museum website.</p>
     </section>
   </main>
@@ -88,6 +90,6 @@
   <div id="toast" role="status" aria-live="polite" hidden></div>
   <div id="loading" class="loading-status" role="status"><span class="loading-dot"></span><span id="loading-text">Loading the bridge scene</span><span id="loading-percent"></span></div>
   <div id="fatal-error" class="fatal-error" role="alert" hidden><h2>The scene could not open</h2><p id="error-message"></p><button id="retry-button" class="primary-button">Reload</button></div>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=20261027-windows"></script>
 </body>
 </html>

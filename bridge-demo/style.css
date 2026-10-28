@@ -20,6 +20,7 @@ h1 span{letter-spacing:.035em;font-size:clamp(19px,2vw,27px)}
 .primary-button{letter-spacing:.35px}.panel h2{font-family:Georgia,"Times New Roman",serif;letter-spacing:0;font-size:26px;line-height:1.2}
 .repair-status{position:fixed;left:34px;top:100px;z-index:4;background:rgba(26,43,37,.88);border:1px solid rgba(215,187,135,.4);padding:8px 12px;border-radius:4px;font-size:10px;letter-spacing:.8px;color:var(--accent);pointer-events:none}.repair-download{display:block;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);font-size:10px;text-decoration:none}
 .demo-notice{position:fixed;right:34px;bottom:10px;z-index:4;margin:0;color:#c8d3c8;font-size:9px;letter-spacing:.6px;pointer-events:none;text-shadow:0 1px 4px #000}
+.window-option{display:flex;align-items:center;gap:10px;font-size:12px;line-height:1.5;color:var(--ink);padding:14px 0 3px}.window-option input{accent-color:var(--accent);width:16px;height:16px}
 .panel p:not(.eyebrow){line-height:1.8}.tool-button[aria-pressed="true"]{border-color:rgba(215,187,135,.65);background:rgba(115,93,50,.26);color:#ebd3a7}
 .quality-label select{max-width:84px;font-size:11px}.location{min-width:145px}.waypoint{letter-spacing:0}.compact{white-space:normal}
 @media(max-width:1050px){.tools .tool-label{display:none}.quality-label select{max-width:76px}.location{min-width:120px}}

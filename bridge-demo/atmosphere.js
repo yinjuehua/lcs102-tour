@@ -1,3 +1,5 @@
+import { windowPanes } from './window-layout.js?v=20261027-windows';
+
 /**
  * Strong, switchable cinematic presentation effects for the reconstructed
  * bridge. The bright parts are deliberately world anchored: window light
@@ -50,11 +52,32 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
 
   const quadMesh = (specs, name) => {
     const positions = [];
+    const normals = [];
     const uvs = [];
     const indices = [];
     specs.forEach((spec, quadIndex) => {
+      const a = [
+        spec[1][0] - spec[0][0],
+        spec[1][1] - spec[0][1],
+        spec[1][2] - spec[0][2]
+      ];
+      const b = [
+        spec[2][0] - spec[0][0],
+        spec[2][1] - spec[0][1],
+        spec[2][2] - spec[0][2]
+      ];
+      const normal = [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0]
+      ];
+      const normalLength = Math.hypot(normal[0], normal[1], normal[2]) || 1;
+      normal[0] /= normalLength;
+      normal[1] /= normalLength;
+      normal[2] /= normalLength;
       spec.forEach((point) => {
         positions.push(point[0], point[1], point[2]);
+        normals.push(normal[0], normal[1], normal[2]);
       });
       // Every quad uses the same local coordinates so the fragment shader can
       // shape a soft edge and animate cloud shadows over its surface.
@@ -65,6 +88,7 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
     const mesh = new pc.Mesh(app.graphicsDevice);
     mesh.name = name;
     mesh.setPositions(positions);
+    mesh.setNormals(normals);
     mesh.setUvs(0, uvs);
     mesh.setIndices(indices);
     mesh.update();
@@ -76,6 +100,12 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
     const meshInstance = new pc.MeshInstance(mesh, material, entity);
     meshInstance.castShadow = false;
     meshInstance.receiveShadow = false;
+    // Shader vertex motion is deliberately tiny, but these are translucent
+    // cards and dust quads: stale AABBs or a frustum edge should never make a
+    // light pop out while the camera turns. A stable draw bucket also keeps
+    // the transparent groups ordered while their depth changes.
+    meshInstance.cull = false;
+    meshInstance.drawBucket = Math.max(0, Math.min(255, Math.round(drawOrder)));
     meshInstance.drawOrder = drawOrder;
     entity.addComponent('render', { meshInstances: [meshInstance] });
     effectRoot.addChild(entity);
@@ -94,34 +124,28 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
     return material;
   };
 
-  // The reference hotspot is [1.5, 1.8, -1.3]. Additional cards follow the
-  // curved window run around z ~= -2.2 and the right-hand wall at x ~= 1.7.
-  // They are intentionally close to the inferred openings so depth testing
-  // lets foreground splats occlude the light instead of painting the screen.
-  const windowCards = [];
-  const addWindowCard = (x0, x1, z, y0 = 1.25, y1 = 2.24) => {
-    windowCards.push([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]]);
-  };
-  addWindowCard(1.14, 1.84, -1.38);
-  addWindowCard(-1.43, -0.75, -2.22);
-  addWindowCard(-0.68, 0.04, -2.22);
-  addWindowCard(0.10, 0.83, -2.22);
-  addWindowCard(0.89, 1.63, -2.22);
-  // Right-hand side panes are planes in the x-constant wall.
-  windowCards.push(
-    [[1.72, 1.25, -1.32], [1.72, 1.25, -0.61], [1.72, 2.24, -0.61], [1.72, 2.24, -1.32]]
-  );
+  // Share calibrated apertures with the ocean and glass. Light is slightly
+  // cabinward of the opaque pane so it cannot depth-fight the background.
+  const windowCards = windowPanes.map(pane => pane.corners.map(corner =>
+    corner.map((value, axis) => value + pane.inward[axis] * 0.018)));
 
   const windowMaterial = materialDefaults(new pc.ShaderMaterial({
     uniqueName: 'LCS102CinematicWindowGlow',
-    attributes: { aPosition: pc.SEMANTIC_POSITION, aUv0: pc.SEMANTIC_TEXCOORD0 },
+    attributes: {
+      aPosition: pc.SEMANTIC_POSITION,
+      aNormal: pc.SEMANTIC_NORMAL,
+      aUv0: pc.SEMANTIC_TEXCOORD0
+    },
     vertexGLSL: `
       attribute vec3 aPosition;
+      attribute vec3 aNormal;
       attribute vec2 aUv0;
       uniform mat4 matrix_viewProjection;
       uniform float uTime;
       varying vec2 vUv;
       varying float vPhase;
+      varying vec3 vWorldPosition;
+      varying vec3 vNormal;
       void main(void) {
         vec3 p = aPosition;
         float phase = fract(sin(dot(aPosition, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
@@ -132,15 +156,30 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
         gl_Position = matrix_viewProjection * vec4(p, 1.0);
         vUv = aUv0;
         vPhase = phase;
+        vWorldPosition = p;
+        vNormal = aNormal;
       }`,
     fragmentGLSL: `
       precision highp float;
       uniform vec3 uColor;
+      uniform vec3 uCameraPosition;
       uniform float uTime;
       uniform float uOpacity;
       uniform float uIntensity;
       varying vec2 vUv;
       varying float vPhase;
+      varying vec3 vWorldPosition;
+      varying vec3 vNormal;
+      float viewFade(vec3 worldPosition, vec3 normal) {
+        vec3 toCamera = uCameraPosition - worldPosition;
+        float distanceToCamera = max(length(toCamera), 0.0001);
+        float nearFade = smoothstep(0.035, 0.24, distanceToCamera);
+        float farFade = 1.0 - smoothstep(14.0, 26.0, distanceToCamera);
+        float normalLength = max(length(normal), 0.0001);
+        float facing = abs(dot(normal / normalLength, toCamera / distanceToCamera));
+        float angleFade = smoothstep(0.035, 0.22, facing);
+        return nearFade * farFade * angleFade;
+      }
       void main(void) {
         vec2 p = vUv - 0.5;
         float edgeX = smoothstep(0.0, 0.17, vUv.x) * (1.0 - smoothstep(0.83, 1.0, vUv.x));
@@ -151,40 +190,42 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
         );
         float cloud = mix(0.52, 1.0, smoothstep(0.12, 0.88, cloudWave));
         float center = 1.0 - 0.18 * min(1.0, dot(p, p) * 3.0);
-        float alpha = edge * cloud * center * uOpacity;
-        if (alpha < 0.004) discard;
+        float alpha = edge * cloud * center * uOpacity * viewFade(vWorldPosition, vNormal);
         gl_FragColor = vec4(uColor * uIntensity * (0.82 + cloud * 0.48), alpha);
       }`
   }));
-  windowMaterial.setParameter('uColor', new Float32Array([1.0, 0.51, 0.16]));
+  windowMaterial.setParameter('uColor', new Float32Array([1.0, 0.71, 0.35]));
   const windowMesh = quadMesh(windowCards, 'LCS102 warm window cards');
   addMesh('Warm window openings', windowMesh, windowMaterial, 170);
 
   // Make tapered, world-space ribbons from the window run into the room. The
   // animated shader is a cheap cloud-shadow approximation: the bright bands
   // drift slowly even when reduced motion freezes the time parameter.
-  const shaft = (farA, farB, nearA, nearB, y0 = 1.06, y1 = 2.28) => [[
-    [nearA[0], y0, nearA[1]], [nearB[0], y0, nearB[1]],
-    [farB[0], y1, farB[1]], [farA[0], y1, farA[1]]
-  ]];
-  const shafts = [
-    ...shaft([1.10, -1.39], [1.86, -1.39], [0.06, -0.44], [0.78, -0.44], 0.98, 2.32),
-    ...shaft([-1.45, -2.23], [-0.75, -2.23], [-0.10, -0.50], [0.40, -0.50], 1.02, 2.26),
-    ...shaft([-0.68, -2.23], [0.06, -2.23], [0.06, -0.20], [0.59, -0.20], 1.12, 2.30),
-    ...shaft([0.13, -2.23], [0.84, -2.23], [0.44, -0.12], [0.94, -0.12], 1.00, 2.22),
-    ...shaft([0.90, -2.23], [1.64, -2.23], [0.80, 0.04], [1.22, 0.04], 1.08, 2.30),
-    ...shaft([1.72, -1.30], [1.72, -0.58], [0.76, -0.18], [1.00, 0.31], 1.15, 2.25)
-  ];
+  const shafts = windowPanes.map((pane, index) => {
+    const [bl, br, tr, tl] = windowCards[index];
+    const inward = pane.inward;
+    const reach = 1.15;
+    const near = corner => [corner[0] + inward[0] * reach,
+      Math.max(0.76, corner[1] - 0.30), corner[2] + inward[2] * reach];
+    return [near(bl), near(br), tr, tl];
+  });
   const shaftMaterial = materialDefaults(new pc.ShaderMaterial({
     uniqueName: 'LCS102SlowWindowLightShafts',
-    attributes: { aPosition: pc.SEMANTIC_POSITION, aUv0: pc.SEMANTIC_TEXCOORD0 },
+    attributes: {
+      aPosition: pc.SEMANTIC_POSITION,
+      aNormal: pc.SEMANTIC_NORMAL,
+      aUv0: pc.SEMANTIC_TEXCOORD0
+    },
     vertexGLSL: `
       attribute vec3 aPosition;
+      attribute vec3 aNormal;
       attribute vec2 aUv0;
       uniform mat4 matrix_viewProjection;
       uniform float uTime;
       varying vec2 vUv;
       varying float vPhase;
+      varying vec3 vWorldPosition;
+      varying vec3 vNormal;
       void main(void) {
         vec3 p = aPosition;
         float phase = fract(sin(dot(aPosition, vec3(21.17, 47.23, 11.91))) * 19341.73);
@@ -195,72 +236,98 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
         gl_Position = matrix_viewProjection * vec4(p, 1.0);
         vUv = aUv0;
         vPhase = phase;
+        vWorldPosition = p;
+        vNormal = aNormal;
       }`,
     fragmentGLSL: `
       precision highp float;
       uniform vec3 uColor;
+      uniform vec3 uCameraPosition;
       uniform float uTime;
       uniform float uOpacity;
       uniform float uIntensity;
       varying vec2 vUv;
       varying float vPhase;
+      varying vec3 vWorldPosition;
+      varying vec3 vNormal;
+      float viewFade(vec3 worldPosition, vec3 normal) {
+        vec3 toCamera = uCameraPosition - worldPosition;
+        float distanceToCamera = max(length(toCamera), 0.0001);
+        float nearFade = smoothstep(0.035, 0.24, distanceToCamera);
+        float farFade = 1.0 - smoothstep(14.0, 26.0, distanceToCamera);
+        float normalLength = max(length(normal), 0.0001);
+        float facing = abs(dot(normal / normalLength, toCamera / distanceToCamera));
+        float angleFade = smoothstep(0.035, 0.22, facing);
+        return nearFade * farFade * angleFade;
+      }
       void main(void) {
         float edge = smoothstep(0.0, 0.19, vUv.x) * (1.0 - smoothstep(0.81, 1.0, vUv.x));
         float fade = smoothstep(0.0, 0.06, vUv.y) * (1.0 - smoothstep(0.72, 1.0, vUv.y));
         float waveA = 0.5 + 0.5 * sin(uTime * 0.18 + vUv.y * 8.7 + vPhase * 6.2831);
         float waveB = 0.5 + 0.5 * sin(uTime * 0.11 - vUv.y * 4.3 + vUv.x * 6.0 + vPhase * 2.1);
         float cloud = 0.42 + 0.58 * smoothstep(0.18, 0.92, waveA * 0.62 + waveB * 0.38);
-        float alpha = edge * fade * cloud * uOpacity;
-        if (alpha < 0.003) discard;
+        float alpha = edge * fade * cloud * uOpacity * viewFade(vWorldPosition, vNormal);
         gl_FragColor = vec4(uColor * uIntensity * (0.68 + cloud * 0.62), alpha);
       }`
   }));
-  shaftMaterial.setParameter('uColor', new Float32Array([1.0, 0.30, 0.075]));
+  shaftMaterial.setParameter('uColor', new Float32Array([1.0, 0.55, 0.20]));
   const shaftMesh = quadMesh(shafts, 'LCS102 tapered window light shafts');
   addMesh('Slow warm light shafts', shaftMesh, shaftMaterial, 175);
 
   // Window-centered lens glints make the bloom unmistakable without using a
   // fixed post-process overlay. Their movement is therefore tied to the
   // world-space panes as the viewer turns.
-  const glintCenters = [
-    [1.50, 1.73, -1.365],
-    [-1.08, 1.74, -2.205], [-0.32, 1.74, -2.205], [0.47, 1.74, -2.205],
-    [1.26, 1.74, -2.205], [1.735, 1.72, -0.98]
-  ];
-  const glintCards = glintCenters.map(([x, y, z], index) => {
-    const width = index === 0 ? 0.95 : 0.74;
-    const height = index === 0 ? 1.10 : 0.92;
-    return [
-      [x - width * 0.5, y - height * 0.5, z], [x + width * 0.5, y - height * 0.5, z],
-      [x + width * 0.5, y + height * 0.5, z], [x - width * 0.5, y + height * 0.5, z]
-    ];
+  const glintCards = windowCards.filter((_, index) => index === 0 || index === 2).map(corners => {
+    const center = corners.reduce((sum, c) => sum.map((v, axis) => v+c[axis]/4), [0,0,0]);
+    const height = Math.abs(corners[3][1] - corners[0][1]);
+    return corners.map(c => [
+      center[0] + (c[0]-center[0])*0.92,
+      center[1] + height*0.27 + (c[1]-center[1])*1.15,
+      center[2] + (c[2]-center[2])*0.92
+    ]);
   });
-  // The right-wall glint needs an x-constant plane rather than the x/y plane
-  // used by the forward window row.
-  glintCards[glintCards.length - 1] = [
-    [1.735, 1.27, -1.32], [1.735, 1.27, -0.64],
-    [1.735, 2.17, -0.64], [1.735, 2.17, -1.32]
-  ];
   const glintMaterial = materialDefaults(new pc.ShaderMaterial({
     uniqueName: 'LCS102WindowLensGlints',
-    attributes: { aPosition: pc.SEMANTIC_POSITION, aUv0: pc.SEMANTIC_TEXCOORD0 },
+    attributes: {
+      aPosition: pc.SEMANTIC_POSITION,
+      aNormal: pc.SEMANTIC_NORMAL,
+      aUv0: pc.SEMANTIC_TEXCOORD0
+    },
     vertexGLSL: `
       attribute vec3 aPosition;
+      attribute vec3 aNormal;
       attribute vec2 aUv0;
       uniform mat4 matrix_viewProjection;
       uniform float uTime;
       varying vec2 vUv;
+      varying vec3 vWorldPosition;
+      varying vec3 vNormal;
       void main(void) {
         gl_Position = matrix_viewProjection * vec4(aPosition, 1.0);
         vUv = aUv0;
+        vWorldPosition = aPosition;
+        vNormal = aNormal;
       }`,
     fragmentGLSL: `
       precision highp float;
       uniform float uTime;
+      uniform vec3 uCameraPosition;
       uniform float uOpacity;
       uniform float uIntensity;
       uniform vec3 uColor;
       varying vec2 vUv;
+      varying vec3 vWorldPosition;
+      varying vec3 vNormal;
+      float viewFade(vec3 worldPosition, vec3 normal) {
+        vec3 toCamera = uCameraPosition - worldPosition;
+        float distanceToCamera = max(length(toCamera), 0.0001);
+        float nearFade = smoothstep(0.035, 0.24, distanceToCamera);
+        float farFade = 1.0 - smoothstep(14.0, 26.0, distanceToCamera);
+        float normalLength = max(length(normal), 0.0001);
+        float facing = abs(dot(normal / normalLength, toCamera / distanceToCamera));
+        float angleFade = smoothstep(0.035, 0.22, facing);
+        return nearFade * farFade * angleFade;
+      }
       void main(void) {
         vec2 p = (vUv - 0.5) * vec2(2.0, 2.0);
         float radius = length(p);
@@ -269,12 +336,12 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
         float crossY = exp(-abs(p.y) * 18.0) * exp(-abs(p.x) * 2.0);
         float flare = core * 0.78 + crossX * 0.26 + crossY * 0.20;
         float pulse = 0.80 + 0.20 * sin(uTime * 0.24 + p.x * 3.0 + p.y * 2.0);
-        float alpha = flare * pulse * uOpacity;
-        if (alpha < 0.004) discard;
+        float alpha = flare * pulse * uOpacity * viewFade(vWorldPosition, vNormal);
         gl_FragColor = vec4(uColor * uIntensity, alpha);
       }`
   }));
-  glintMaterial.setParameter('uColor', new Float32Array([1.0, 0.62, 0.30]));
+  glintMaterial.setParameter('uColor', new Float32Array([1.0, 0.72, 0.40]));
+  glintMaterial.setParameter('uIntensity', 1.85);
   const glintMesh = quadMesh(glintCards, 'LCS102 window lens glints');
   addMesh('Window lens glints', glintMesh, glintMaterial, 185);
 
@@ -318,6 +385,7 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
       uniform float uTime;
       varying vec2 vUv;
       varying float vFade;
+      varying vec3 vWorldPosition;
       void main(void) {
         float seed = fract(sin(dot(aPosition, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
         vec3 center = aPosition;
@@ -329,16 +397,22 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
         gl_Position = matrix_viewProjection * vec4(world, 1.0);
         vUv = aUv0;
         vFade = mix(0.18, 0.58, seed) * (0.82 + 0.18 * sin(uTime * 0.25 + seed * 40.0));
+        vWorldPosition = world;
       }`,
     fragmentGLSL: `
       precision highp float;
+      uniform vec3 uCameraPosition;
       uniform float uOpacity;
       varying vec2 vUv;
       varying float vFade;
+      varying vec3 vWorldPosition;
       void main(void) {
         float radius = dot(vUv, vUv);
-        if (radius > 1.0) discard;
-        float alpha = exp(-radius * 4.6) * vFade * uOpacity;
+        float distanceToCamera = max(length(uCameraPosition - vWorldPosition), 0.0001);
+        float nearFade = smoothstep(0.035, 0.24, distanceToCamera);
+        float farFade = 1.0 - smoothstep(14.0, 26.0, distanceToCamera);
+        float discFade = 1.0 - smoothstep(0.82, 1.0, radius);
+        float alpha = exp(-radius * 4.6) * discFade * vFade * uOpacity * nearFade * farFade;
         gl_FragColor = vec4(1.46, 0.95, 0.43, alpha);
       }`
   }));
@@ -350,61 +424,162 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
   const dustInstance = new pc.MeshInstance(dustMesh, dustMaterial, dustEntity);
   dustInstance.castShadow = false;
   dustInstance.receiveShadow = false;
+  dustInstance.cull = false;
+  dustInstance.drawBucket = 190;
   dustInstance.drawOrder = 190;
   dustEntity.addComponent('render', { meshInstances: [dustInstance] });
   effectRoot.addChild(dustEntity);
 
   const materials = [windowMaterial, shaftMaterial, glintMaterial, dustMaterial];
   const dynamicMaterials = [windowMaterial, shaftMaterial, glintMaterial, dustMaterial];
+  const initialCameraPosition = camera.getPosition();
+  const cameraPosition = new Float32Array([
+    initialCameraPosition.x,
+    initialCameraPosition.y,
+    initialCameraPosition.z
+  ]);
+  materials.forEach((material) => material.setParameter('uCameraPosition', cameraPosition));
+
   let enabled = true;
   let destroyed = false;
   let time = 0;
   let quality = 'standard';
+  let effectEnvelope = 0;
+  let effectTarget = 1;
 
   const profiles = {
     low: {
       bloom: 0.26, blur: 9, scale: 0.76,
-      windowOpacity: 0.56, shaftOpacity: 0.45, glintOpacity: 0.62, dustOpacity: 0.46
+      windowOpacity: 0.18, shaftOpacity: 0.36, glintOpacity: 0.52, dustOpacity: 0.46
     },
     standard: {
       bloom: 0.40, blur: 16, scale: 1,
-      windowOpacity: 0.72, shaftOpacity: 0.60, glintOpacity: 0.92, dustOpacity: 0.72
+      windowOpacity: 0.26, shaftOpacity: 0.48, glintOpacity: 0.72, dustOpacity: 0.72
     },
     high: {
       bloom: 0.52, blur: 20, scale: 1,
-      windowOpacity: 0.82, shaftOpacity: 0.70, glintOpacity: 1.08, dustOpacity: 0.88
+      windowOpacity: 0.34, shaftOpacity: 0.58, glintOpacity: 0.90, dustOpacity: 0.88
     }
+  };
+
+  const standardProfile = { ...profiles.standard };
+  let qualityCurrent = { ...standardProfile };
+  let qualityFrom = { ...standardProfile };
+  let qualityTo = { ...standardProfile };
+  let qualityProgress = 1;
+
+  const fadeDuration = reducedMotion ? 0.28 : 1.2;
+  const qualityDuration = reducedMotion ? 0.24 : 0.72;
+  const frameGrade = {
+    brightness: 1.045,
+    contrast: 0.92,
+    saturation: 1.13,
+    tint: [1.045, 1.012, 0.965],
+    fringing: 0.24,
+    vignette: 0.13,
+    colorEnhance: { shadows: -0.08, highlights: 0.2, vibrance: 0.16, midtones: 0.05, dehaze: -0.035 }
   };
 
   function setUniform(material, name, value) {
     material.setParameter(name, value);
   }
 
+  const lerp = (from, to, amount) => from + (to - from) * amount;
+  const smooth = (amount) => amount * amount * (3 - 2 * amount);
+
+  function applyVisualState() {
+    const profile = qualityCurrent;
+    const amount = smooth(effectEnvelope);
+    frame.bloom.intensity = profile.bloom * amount;
+    frame.bloom.blurLevel = Math.max(1, Math.round(profile.blur));
+    // The app already controls resolution; do not reallocate HDR targets every
+    // frame while a quality profile eases between values.
+    frame.rendering.renderTargetScale = 1;
+    frame.grading.enabled = true;
+    frame.grading.brightness = lerp(1, frameGrade.brightness, amount);
+    frame.grading.contrast = lerp(1, frameGrade.contrast, amount);
+    frame.grading.saturation = lerp(1, frameGrade.saturation, amount);
+    frame.grading.tint.set(
+      lerp(1, frameGrade.tint[0], amount),
+      lerp(1, frameGrade.tint[1], amount),
+      lerp(1, frameGrade.tint[2], amount)
+    );
+    frame.fringing.intensity = frameGrade.fringing * amount;
+    frame.vignette.intensity = frameGrade.vignette * amount;
+    frame.colorEnhance.enabled = true;
+    frame.colorEnhance.shadows = frameGrade.colorEnhance.shadows * amount;
+    frame.colorEnhance.highlights = frameGrade.colorEnhance.highlights * amount;
+    frame.colorEnhance.vibrance = frameGrade.colorEnhance.vibrance * amount;
+    frame.colorEnhance.midtones = frameGrade.colorEnhance.midtones * amount;
+    frame.colorEnhance.dehaze = frameGrade.colorEnhance.dehaze * amount;
+    setUniform(windowMaterial, 'uOpacity', profile.windowOpacity * amount);
+    setUniform(shaftMaterial, 'uOpacity', profile.shaftOpacity * amount);
+    setUniform(glintMaterial, 'uOpacity', profile.glintOpacity * amount);
+    setUniform(dustMaterial, 'uOpacity', profile.dustOpacity * amount);
+  }
+
+  function advanceQuality(dt) {
+    if (qualityProgress >= 1) return false;
+    qualityProgress = Math.min(1, qualityProgress + dt / qualityDuration);
+    const amount = smooth(qualityProgress);
+    const fields = ['bloom', 'blur', 'scale', 'windowOpacity', 'shaftOpacity', 'glintOpacity', 'dustOpacity'];
+    fields.forEach((field) => {
+      qualityCurrent[field] = lerp(qualityFrom[field], qualityTo[field], amount);
+    });
+    return true;
+  }
+
   function setQuality(value) {
-    quality = profiles[value] ? value : 'standard';
-    const profile = profiles[quality];
-    frame.bloom.intensity = profile.bloom;
-    frame.bloom.blurLevel = profile.blur;
-    frame.rendering.renderTargetScale = profile.scale;
-    setUniform(windowMaterial, 'uOpacity', profile.windowOpacity);
-    setUniform(shaftMaterial, 'uOpacity', profile.shaftOpacity);
-    setUniform(glintMaterial, 'uOpacity', profile.glintOpacity);
-    setUniform(dustMaterial, 'uOpacity', profile.dustOpacity);
-    if (enabled) frame.update();
+    const nextQuality = profiles[value] ? value : 'standard';
+    if (nextQuality === quality && qualityProgress >= 1) return;
+    quality = nextQuality;
+    qualityFrom = { ...qualityCurrent };
+    qualityTo = { ...profiles[quality] };
+    qualityProgress = 0;
+    applyVisualState();
+    if (frame.enabled) frame.update();
   }
 
   function setEnabled(value) {
     if (destroyed) return false;
     enabled = Boolean(value);
-    effectRoot.enabled = enabled;
-    frame.enabled = enabled;
-    if (enabled) frame.update();
+    effectTarget = enabled ? 1 : 0;
+    if (enabled) {
+      effectRoot.enabled = true;
+      if (!frame.enabled) frame.enabled = true;
+      applyVisualState();
+      frame.update();
+    }
     return enabled;
   }
 
   function update(dt) {
-    if (destroyed || !enabled) return;
-    if (!reducedMotion) time += Math.min(dt, 0.05);
+    if (destroyed) return;
+    dt = Math.min(Math.max(dt, 0), 0.05);
+    const envelopeBefore = effectEnvelope;
+    const qualityBefore = qualityProgress;
+    if (effectTarget > effectEnvelope) {
+      effectEnvelope = Math.min(effectTarget, effectEnvelope + dt / fadeDuration);
+    } else if (effectTarget < effectEnvelope) {
+      effectEnvelope = Math.max(effectTarget, effectEnvelope - dt / fadeDuration);
+    }
+    const qualityChanged = advanceQuality(dt);
+    if (effectEnvelope !== envelopeBefore || qualityChanged || qualityProgress !== qualityBefore) {
+      applyVisualState();
+      if (frame.enabled) frame.update();
+    }
+
+    // Keep the same HDR/ACES display path at zero effect strength. Dropping
+    // CameraFrame here changes both tone mapping and custom-material gamma,
+    // causing a final visible pop even after every light has faded to zero.
+    // Bloom and all stylization fade to neutral; geometry can stop rendering.
+    effectRoot.enabled = effectEnvelope > 0 || effectTarget > 0;
+
+    if (effectEnvelope === 0 && effectTarget === 0) return;
+    if (!reducedMotion) time += dt;
+    const p = camera.getPosition();
+    cameraPosition[0] = p.x; cameraPosition[1] = p.y; cameraPosition[2] = p.z;
+    materials.forEach((material) => setUniform(material, 'uCameraPosition', cameraPosition));
     const r = camera.right;
     const u = camera.up;
     right[0] = r.x; right[1] = r.y; right[2] = r.z;
@@ -414,7 +589,8 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
     dynamicMaterials.forEach((material) => setUniform(material, 'uTime', time));
   }
 
-  setQuality('standard');
+  applyVisualState();
+  frame.update();
   return {
     setEnabled,
     setQuality,
@@ -424,7 +600,10 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
       if (destroyed) return;
       destroyed = true;
       enabled = false;
+      effectTarget = 0;
+      effectEnvelope = 0;
       effectRoot.enabled = false;
+      frame.enabled = false;
       frame.destroy();
       effectRoot.destroy();
       materials.forEach((material) => material.destroy());
