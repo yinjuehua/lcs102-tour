@@ -1,4 +1,4 @@
-import { windowPanes } from './window-layout.js?v=20261027-sphere';
+import { windowPanes } from './window-layout.js?v=20261028-polish';
 
 const capture = [0, 1.6626, 0];
 const sub = (a,b) => a.map((v,i)=>v-b[i]);
@@ -9,7 +9,7 @@ const vec = a => `vec3(${a.map(v=>Number(v).toFixed(8)).join(',')})`;
 
 // Convex room perimeter, including the solid door/panel facets between glass.
 // Exterior removal must work after translation, not just along capture rays.
-function roomPlanes() {
+export function roomFootprint() {
   const points=windowPanes.flatMap(p=>p.corners.map(c=>[c[0],c[2]]));
   points.push([-1.418,-0.659],[-1.370,-1.093],[-1.114,-1.586],[-0.712,-1.794],[-0.194,-2.064]);
   points.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
@@ -17,7 +17,11 @@ function roomPlanes() {
   const lower=[],upper=[];
   for(const p of points){while(lower.length>1&&turn(lower.at(-2),lower.at(-1),p)<=0)lower.pop();lower.push(p);}
   for(const p of [...points].reverse()){while(upper.length>1&&turn(upper.at(-2),upper.at(-1),p)<=0)upper.pop();upper.push(p);}
-  const hull=[...lower.slice(0,-1),...upper.slice(0,-1)];
+  return [...lower.slice(0,-1),...upper.slice(0,-1)];
+}
+
+function roomPlanes() {
+  const hull=roomFootprint();
   return hull.map((a,i)=>{
     const b=hull[(i+1)%hull.length];let n=normal([a[1]-b[1],0,b[0]-a[0]]);
     const p=[a[0],0,a[1]];
@@ -95,6 +99,8 @@ export function installExteriorCutout(component) {
       float nearOutside=smoothstep(0.015,0.065,outside)*windowBand*(1.0-greenFrame);
       removal=max(farOutside,nearOutside);
       ${openings}
+      // Exterior cleanup cannot punch a hole through the captured deck.
+      removal*=smoothstep(0.12,0.25,center.y);
       color.a*=1.0-removal;
     }`;
   component.setWorkBufferModifier({glsl});

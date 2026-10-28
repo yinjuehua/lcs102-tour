@@ -1,5 +1,6 @@
-import { windowPanes } from './window-layout.js?v=20261027-sphere';
-import { createPortholeLight } from './porthole-light.js?v=20261027-sphere';
+import { windowPanes } from './window-layout.js?v=20261028-polish';
+import { createPortholeLight } from './porthole-light.js?v=20261028-polish';
+import { createLensFlare } from './lens-flare.js?v=20261028-polish';
 
 /**
  * Strong, switchable cinematic presentation effects for the reconstructed
@@ -55,6 +56,7 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
   app.scene.layers.insertTransparent(lightLayer,immediateIndex<0?app.scene.layers.layerList.length:immediateIndex);
   camera.camera.layers=[...camera.camera.layers,lightLayer.id];
   const portholeLight=createPortholeLight(pc,app,{layerId:lightLayer.id});
+  const lensFlare=createLensFlare(pc,app,camera,{layerId:lightLayer.id});
 
   const quadMesh = (specs, name) => {
     const positions = [];
@@ -355,7 +357,7 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
   // point pass. These are tiny world-space billboards, depth-tested against
   // the splat, so they read as luminous motes in the incoming beams rather
   // than a flat screen texture.
-  const count = 220;
+  const count = 440;
   const dustPositions = [];
   const dustUvs = [];
   const dustIndices = [];
@@ -426,7 +428,7 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
   const up = new Float32Array([0, 1, 0]);
   dustMaterial.setParameter('uRight', right);
   dustMaterial.setParameter('uUp', up);
-  const dustEntity = new pc.Entity('220 airborne light motes');
+  const dustEntity = new pc.Entity('440 airborne light motes');
   const dustInstance = new pc.MeshInstance(dustMesh, dustMaterial, dustEntity);
   dustInstance.castShadow = false;
   dustInstance.receiveShadow = false;
@@ -518,9 +520,10 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
     frame.colorEnhance.vibrance = frameGrade.colorEnhance.vibrance * amount;
     frame.colorEnhance.midtones = frameGrade.colorEnhance.midtones * amount;
     frame.colorEnhance.dehaze = frameGrade.colorEnhance.dehaze * amount;
-    setUniform(windowMaterial, 'uOpacity', profile.windowOpacity * amount);
-    setUniform(shaftMaterial, 'uOpacity', profile.shaftOpacity * amount);
-    setUniform(glintMaterial, 'uOpacity', profile.glintOpacity * amount);
+    // Halve the emitted light once; retain the same bloom response and fade.
+    setUniform(windowMaterial, 'uOpacity', profile.windowOpacity * amount * 0.5);
+    setUniform(shaftMaterial, 'uOpacity', profile.shaftOpacity * amount * 0.5);
+    setUniform(glintMaterial, 'uOpacity', profile.glintOpacity * amount * 0.5);
     setUniform(dustMaterial, 'uOpacity', profile.dustOpacity * amount);
   }
 
@@ -581,6 +584,7 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
     // Bloom and all stylization fade to neutral; geometry can stop rendering.
     effectRoot.enabled = effectEnvelope > 0 || effectTarget > 0;
     portholeLight.update(reducedMotion?0:dt,camera,smooth(effectEnvelope),quality);
+    lensFlare.update(dt,smooth(effectEnvelope));
 
     if (effectEnvelope === 0 && effectTarget === 0) return;
     if (!reducedMotion) time += dt;
@@ -613,6 +617,7 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
       frame.enabled = false;
       frame.destroy();
       portholeLight.destroy();
+      lensFlare.destroy();
       camera.camera.layers=camera.camera.layers.filter(id=>id!==lightLayer.id);
       app.scene.layers.remove(lightLayer);
       effectRoot.destroy();

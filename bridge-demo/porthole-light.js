@@ -228,7 +228,7 @@ export function createPortholeLight(pc, app, {layerId=pc.LAYERID_WORLD}={}) {
     // Keep the aperture itself white-hot in the intended review view. Only the
     // shallow ribbons need the angle fade; applying it to the core would make
     // the strongest source unexpectedly dim when the camera is near eye level.
-    const envelope = amount * distanceFade;
+    const envelope = amount * distanceFade * 0.5;
     active = envelope > 0.001;
     root.enabled = active;
     if (!active) return;

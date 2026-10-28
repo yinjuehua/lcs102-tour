@@ -10,6 +10,8 @@ The static app uses PlayCanvas 2.23.3 and includes an approximate point-cloud sc
 
 The **Repairs** layer contains surfaces inferred from visible form. It is not measured restoration, a complete cabin model, or evidence that the original surfaces looked that way.
 
+The scenic preview includes a dark inferred cap beneath the captured deck to prevent sea showing through missing floor surfaces. The sea has mild optical defocus and mirrored panorama wrapping. Window glow is reduced to half its previous emitted strength; camera-aligned lens ghosts fade with visible light sources, and 440 airborne motes drift through the cabin. These are presentation choices, not recovered source detail.
+
 Review notes are not sent to a server by this static app. They stay in this browser's `localStorage` and can be exported as JSON from the Review panel. Clearing browser or site data can remove local notes.
 
 The first load is approximately 11 MB. Use a modern browser with WebGL2 enabled.

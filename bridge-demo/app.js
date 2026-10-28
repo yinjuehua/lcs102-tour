@@ -1,10 +1,10 @@
 import * as pc from './vendor/playcanvas.mjs';
-import { sceneTransform, waypoints, hotspots, navigation, issueKinds } from './tour-data.js?v=20261027-sphere';
+import { sceneTransform, waypoints, hotspots, navigation, issueKinds } from './tour-data.js?v=20261028-polish';
 import { clamp, allowedMove, angleDelta, validateIssue } from './navigation.js';
-import { createAtmosphere } from './atmosphere.js?v=20261027-sphere';
+import { createAtmosphere } from './atmosphere.js?v=20261028-polish';
 import { createRepairs } from './repairs.js';
-import { createWindows } from './windows.js?v=20261027-sphere';
-import { createSeaMotion } from './sea-motion.js?v=20261027-sphere';
+import { createWindows } from './windows.js?v=20261028-polish';
+import { createSeaMotion } from './sea-motion.js?v=20261028-polish';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('scene');

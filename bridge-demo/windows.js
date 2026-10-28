@@ -1,5 +1,5 @@
-import { windowPanes } from './window-layout.js?v=20261027-sphere';
-import { installExteriorCutout } from './exterior-cutout.js?v=20261027-sphere';
+import { windowPanes } from './window-layout.js?v=20261028-polish';
+import { installExteriorCutout, roomFootprint } from './exterior-cutout.js?v=20261028-polish';
 
 /** A far sea/sky sphere surrounds the cabin. Transparent glass is composed
  * before the splat pass so indoor equipment always remains in front of it. */
@@ -11,7 +11,10 @@ export async function createWindows(pc, app, camera, { bridge, reducedMotion = f
     asset.once('load', resolve); asset.once('error', reject); app.assets.load(asset);
   });
   const texture = asset.resource;
-  texture.addressU = pc.ADDRESS_REPEAT;
+  // The panorama is reflected in the shader at the azimuth seam. Clamping
+  // keeps the linear sampler from pulling a mismatched texel from the other
+  // side of this non-seamless photograph.
+  texture.addressU = pc.ADDRESS_CLAMP_TO_EDGE;
   texture.addressV = pc.ADDRESS_CLAMP_TO_EDGE;
 
   const root = new pc.Entity('Scenic ocean windows');
@@ -49,6 +52,27 @@ export async function createWindows(pc, app, camera, { bridge, reducedMotion = f
       varying vec3 vWorld;
       varying vec3 vNormal;
       varying vec2 vUv;
+      float mirrorPanoramaU(float u) {
+        // Fold the source around its ends so both sides of the atan seam
+        // arrive at the same edge texel. This avoids a wide edge-column mix
+        // that visibly stretches the ocean near the wrap.
+        float folded = fract(u + 0.5);
+        return 1.0 - abs(folded * 2.0 - 1.0);
+      }
+      vec3 sampleOcean(vec2 uv) {
+        return texture2D(uOcean, vec2(mirrorPanoramaU(uv.x),
+                                      clamp(uv.y, 0.02, 0.98))).rgb;
+      }
+      vec3 defocusedSea(vec2 uv) {
+        // Small, symmetric taps give the water a mild optical defocus while
+        // preserving the horizon and avoiding directional smear at the wrap.
+        vec2 tap = vec2(0.0030, 0.0020);
+        return sampleOcean(uv) * 0.52 +
+          (sampleOcean(uv + vec2(tap.x, 0.0)) +
+           sampleOcean(uv - vec2(tap.x, 0.0)) +
+           sampleOcean(uv + vec2(0.0, tap.y)) +
+           sampleOcean(uv - vec2(0.0, tap.y))) * 0.12;
+      }
       void main(void) {
         // One direction-based panorama, rather than one repeated picture per
         // pane. Translation preserves a level, effectively distant horizon.
@@ -58,14 +82,8 @@ export async function createWindows(pc, app, camera, { bridge, reducedMotion = f
                        clamp(0.5 - elevation / 1.8, 0.02, 0.98));
         float sea = smoothstep(0.49, 0.56, uv.y);
         uv.x += sea * sin(uTime * 0.12 + uv.y * 58.0) * 0.00065;
-        vec3 color = texture2D(uOcean, uv).rgb;
-        // The generated photograph is not a seamless HDRI. Blend its two
-        // edges at the rear wrap so adjacent panes never jump from blue to
-        // gold at the atan seam.
-        float seam = 1.0 - smoothstep(0.0, 0.14, min(uv.x, 1.0-uv.x));
-        vec3 seamColor = 0.5 * (texture2D(uOcean, vec2(0.01,uv.y)).rgb +
-                               texture2D(uOcean, vec2(0.99,uv.y)).rgb);
-        color = mix(color, seamColor, seam);
+        vec3 sharpColor = sampleOcean(uv);
+        vec3 color = mix(sharpColor, defocusedSea(uv), sea * 0.9);
         // ShaderMaterial outputs linear color into CameraFrame's HDR target.
         color = pow(color, vec3(2.2));
         float drift = 1.0 + sea * sin(uTime * 0.17 + vWorld.x * 2.8) * 0.018;
@@ -111,6 +129,32 @@ export async function createWindows(pc, app, camera, { bridge, reducedMotion = f
   glass.update();
 
   const meshes = [];
+  // A dark, inferred under-deck cap stops the exterior sphere being visible
+  // through missing floor Gaussians. It sits below the observed deck (-0.16m
+  // at its lowest) and preserves the original floor, hatch and equipment.
+  const footprint=roomFootprint();
+  const deckPositions=footprint.flatMap(([x,z])=>[x,-0.20,z]);
+  const deckIndices=[];
+  for(let i=1;i<footprint.length-1;i++)deckIndices.push(0,i,i+1);
+  const deckMesh=new pc.Mesh(app.graphicsDevice);
+  deckMesh.setPositions(deckPositions);deckMesh.setIndices(deckIndices);deckMesh.update();meshes.push(deckMesh);
+  const deckMaterial=new pc.ShaderMaterial({
+    uniqueName:'LCS102DarkUnderDeckBacking',attributes,vertexGLSL,
+    fragmentGLSL:`
+      precision highp float;
+      varying vec3 vWorld;
+      void main(void) {
+        float grain=fract(sin(dot(floor(vWorld.xz*180.0),vec2(12.9898,78.233)))*43758.5453);
+        vec3 paint=mix(vec3(0.006,0.009,0.008),vec3(0.010,0.015,0.012),grain);
+        gl_FragColor=vec4(paint,1.0);
+      }`
+  });
+  deckMaterial.blendType=pc.BLEND_NONE;deckMaterial.depthTest=true;deckMaterial.depthWrite=true;
+  deckMaterial.cull=pc.CULLFACE_NONE;deckMaterial.update();
+  const deck=new pc.Entity('Inferred opaque under-deck cap');
+  const deckInstance=new pc.MeshInstance(deckMesh,deckMaterial,deck);
+  deckInstance.castShadow=false;deckInstance.receiveShadow=false;
+  deck.addComponent('render',{meshInstances:[deckInstance],layers:[pc.LAYERID_WORLD]});root.addChild(deck);
   const makePaneMesh = (pane, inwardOffset) => {
     const positions = [], normals = [];
     for (const corner of pane.corners) {
@@ -154,7 +198,7 @@ export async function createWindows(pc, app, camera, { bridge, reducedMotion = f
       if (destroyed) return; destroyed = true;
       camera.camera.layers = camera.camera.layers.filter(id => id !== glassLayer.id);
       cutout.destroy(); root.destroy(); app.scene.layers.remove(glassLayer);
-      scenery.destroy(); glass.destroy(); meshes.forEach(mesh => mesh.destroy());
+      scenery.destroy(); glass.destroy(); deckMaterial.destroy(); meshes.forEach(mesh => mesh.destroy());
       app.assets.remove(asset); asset.unload();
     }
   };
