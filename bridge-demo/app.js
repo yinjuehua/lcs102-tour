@@ -1,15 +1,16 @@
 import * as pc from './vendor/playcanvas.mjs';
-import { sceneTransform, waypoints, hotspots, navigation, issueKinds } from './tour-data.js';
+import { sceneTransform, waypoints, hotspots, navigation, issueKinds } from './tour-data.js?v=20261027-sphere';
 import { clamp, allowedMove, angleDelta, validateIssue } from './navigation.js';
-import { createAtmosphere } from './atmosphere.js?v=20261027-windows';
+import { createAtmosphere } from './atmosphere.js?v=20261027-sphere';
 import { createRepairs } from './repairs.js';
-import { createWindows } from './windows.js?v=20261027-windows';
+import { createWindows } from './windows.js?v=20261027-sphere';
+import { createSeaMotion } from './sea-motion.js?v=20261027-sphere';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('scene');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const STORAGE_KEY = 'ship-bridge-review-v1';
-let app, camera, atmosphere, repairs, oceanWindows, entered = false, loaded = false, fatal = false;
+let app, camera, atmosphere, repairs, oceanWindows, seaMotion, entered = false, loaded = false, fatal = false;
 let yaw = waypoints[0].yaw, pitch = waypoints[0].pitch, fov = 65;
 let activeWaypoint = 'origin', flight = null, activeDetail = null, showHotspots = true;
 const keys = new Set(), heldMovement = new Set();
@@ -53,6 +54,7 @@ function updateWaypointUI(id) {
 
 function goToView(view, id = null) {
   if (!loaded || !camera) return;
+  seaMotion?.restoreBasePose();
   enterTour();
   const position = camera.getPosition();
   flight = {
@@ -165,6 +167,9 @@ function bindInterface() {
     if (!oceanWindows) return;
     oceanWindows.setEnabled($('ocean-windows').checked);
   });
+  $('sea-motion').checked=!reducedMotion;
+  $('sea-motion').disabled=reducedMotion;
+  $('sea-motion').addEventListener('change',()=>seaMotion?.setEnabled($('sea-motion').checked));
   $('restoration-button').addEventListener('click', () => {
     if(!repairs) return;
     const enabled=repairs.setEnabled(!repairs.root.enabled);
@@ -186,6 +191,7 @@ function bindInterface() {
     e.preventDefault(); if (!camera || flight) { toast('Wait for the camera to stop before saving.'); return; }
     const note = $('issue-note').value.trim(); if (!note) { $('issue-note').focus(); return; }
     if (issues.length >= 200) { toast('The 200-note limit has been reached. Export and organize the notes first.'); return; }
+    seaMotion?.restoreBasePose();
     const p = camera.getPosition();
     issues.unshift({id:crypto.randomUUID(),createdAt:new Date().toISOString(),kind:$('issue-kind').value,note,
       camera:{position:[p.x,p.y,p.z],yaw,pitch}, scene:'ship-bridge-control-room', vessel:'LCS-102', source:'World Labs single-panorama reconstruction'});
@@ -320,7 +326,7 @@ async function start() {
     bridge.addComponent('gsplat',{asset}); app.root.addChild(bridge);
     repairs=createRepairs(pc,app);
     try {
-      oceanWindows=await createWindows(pc,app,camera,{reducedMotion});
+      oceanWindows=await createWindows(pc,app,camera,{bridge,reducedMotion});
       oceanWindows.setEnabled($('ocean-windows').checked);
     } catch(windowError) {
       console.warn('Scenic windows unavailable; keeping original exterior.',windowError);
@@ -336,7 +342,9 @@ async function start() {
       $('atmosphere-button').title='Atmosphere is unavailable on this graphics device';
     }
     bindNavigation();
-    app.on('update',dt=>{updateCamera(dt);updateMarkers();oceanWindows?.update(dt);atmosphere?.update(dt);});
+    seaMotion=createSeaMotion(pc,camera,{reducedMotion});
+    seaMotion.setEnabled($('sea-motion').checked);
+    app.on('update',dt=>{seaMotion?.restoreBasePose();updateCamera(dt);seaMotion?.update(dt);updateMarkers();oceanWindows?.update(dt);atmosphere?.update(dt);});
     app.graphicsDevice.on('devicelost',()=>{toast('Graphics were interrupted. Waiting for the device to recover.');});
     window.addEventListener('resize',()=>setQuality($('quality').value));
     app.start();

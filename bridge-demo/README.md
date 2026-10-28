@@ -6,7 +6,7 @@
 
 ## What is included
 
-The static app uses PlayCanvas 2.23.3 and includes an approximate point-cloud scene, viewpoints, visual observations, navigation, atmosphere controls, and an optional **Repairs** layer. A scenic ocean-and-sky texture and glass shader replace the window exteriors by default; Help provides an original-exterior comparison. The scenic environment is generated and is not historical evidence. The point cloud is derived from a single 360° image, so occlusion, stretching, missing surfaces, and local geometry remain approximate. The observations are visual notes, not verified historical or technical claims.
+The static app uses PlayCanvas 2.23.3 and includes an approximate point-cloud scene, viewpoints, visual observations, navigation, atmosphere controls, and an optional **Repairs** layer. A sea-and-sky sphere surrounds the cabin behind transparent glass; a reversible splat filter removes the captured exterior instead of covering indoor objects with window images. The circular door porthole is emphasized as the main sunlight source. Gentle camera sway can be disabled in Help; Help also provides an original-exterior comparison. The scenic environment is generated and is not historical evidence. The point cloud is derived from a single 360° image, so occlusion, stretching, missing surfaces, and local geometry remain approximate. The observations are visual notes, not verified historical or technical claims.
 
 The **Repairs** layer contains surfaces inferred from visible form. It is not measured restoration, a complete cabin model, or evidence that the original surfaces looked that way.
 

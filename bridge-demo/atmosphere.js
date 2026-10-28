@@ -1,4 +1,5 @@
-import { windowPanes } from './window-layout.js?v=20261027-windows';
+import { windowPanes } from './window-layout.js?v=20261027-sphere';
+import { createPortholeLight } from './porthole-light.js?v=20261027-sphere';
 
 /**
  * Strong, switchable cinematic presentation effects for the reconstructed
@@ -49,6 +50,11 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
   effectRoot.setLocalEulerAngles(0, 0, 0);
   effectRoot.setLocalScale(1, 1, 1);
   app.root.addChild(effectRoot);
+  const lightLayer=new pc.Layer({name:'Cinematic light after cabin',transparentSortMode:pc.SORTMODE_MANUAL});
+  const immediateIndex=app.scene.layers.layerList.findIndex(layer=>layer.id===pc.LAYERID_IMMEDIATE);
+  app.scene.layers.insertTransparent(lightLayer,immediateIndex<0?app.scene.layers.layerList.length:immediateIndex);
+  camera.camera.layers=[...camera.camera.layers,lightLayer.id];
+  const portholeLight=createPortholeLight(pc,app,{layerId:lightLayer.id});
 
   const quadMesh = (specs, name) => {
     const positions = [];
@@ -107,7 +113,7 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
     meshInstance.cull = false;
     meshInstance.drawBucket = Math.max(0, Math.min(255, Math.round(drawOrder)));
     meshInstance.drawOrder = drawOrder;
-    entity.addComponent('render', { meshInstances: [meshInstance] });
+    entity.addComponent('render', { meshInstances: [meshInstance],layers:[lightLayer.id] });
     effectRoot.addChild(entity);
     return entity;
   };
@@ -427,7 +433,7 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
   dustInstance.cull = false;
   dustInstance.drawBucket = 190;
   dustInstance.drawOrder = 190;
-  dustEntity.addComponent('render', { meshInstances: [dustInstance] });
+  dustEntity.addComponent('render', { meshInstances: [dustInstance],layers:[lightLayer.id] });
   effectRoot.addChild(dustEntity);
 
   const materials = [windowMaterial, shaftMaterial, glintMaterial, dustMaterial];
@@ -574,6 +580,7 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
     // causing a final visible pop even after every light has faded to zero.
     // Bloom and all stylization fade to neutral; geometry can stop rendering.
     effectRoot.enabled = effectEnvelope > 0 || effectTarget > 0;
+    portholeLight.update(reducedMotion?0:dt,camera,smooth(effectEnvelope),quality);
 
     if (effectEnvelope === 0 && effectTarget === 0) return;
     if (!reducedMotion) time += dt;
@@ -605,6 +612,9 @@ export function createAtmosphere(pc, app, camera, { reducedMotion = false } = {}
       effectRoot.enabled = false;
       frame.enabled = false;
       frame.destroy();
+      portholeLight.destroy();
+      camera.camera.layers=camera.camera.layers.filter(id=>id!==lightLayer.id);
+      app.scene.layers.remove(lightLayer);
       effectRoot.destroy();
       materials.forEach((material) => material.destroy());
     }

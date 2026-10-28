@@ -1,9 +1,9 @@
-import { windowPanes } from './window-layout.js?v=20261027-windows';
+import { windowPanes } from './window-layout.js?v=20261027-sphere';
+import { installExteriorCutout } from './exterior-cutout.js?v=20261027-sphere';
 
-/** Pane-sized opaque scenery occludes old exterior splats; glass is drawn
- * over it in its own stable transparent pass. Interior splats remain in front.
- * This is a scenic preview, not a reconstruction of the original exterior. */
-export async function createWindows(pc, app, camera, { reducedMotion = false } = {}) {
+/** A far sea/sky sphere surrounds the cabin. Transparent glass is composed
+ * before the splat pass so indoor equipment always remains in front of it. */
+export async function createWindows(pc, app, camera, { bridge, reducedMotion = false } = {}) {
   const asset = new pc.Asset('Scenic ocean and sky', 'texture',
     { url: './assets/ocean-sky-v1.jpg' }, { flipY: false, mipmaps: true });
   app.assets.add(asset);
@@ -16,28 +16,27 @@ export async function createWindows(pc, app, camera, { reducedMotion = false } =
 
   const root = new pc.Entity('Scenic ocean windows');
   app.root.addChild(root);
-  // Keep both passes inside CameraFrame's scene range (which ends at the
-  // Immediate layer). Appending after UI would bypass HDR/tone mapping.
+  // Background sphere -> glass -> cabin splats -> cinematic light. No
+  // window-sized opaque image is allowed to paint over indoor geometry.
   const layers = app.scene.layers;
-  const immediateIndex = layers.layerList.findIndex(layer => layer.id === pc.LAYERID_IMMEDIATE);
-  const insertIndex = immediateIndex < 0 ? layers.layerList.length : immediateIndex;
-  const replacementLayer = new pc.Layer({ name: 'Empty pane exterior replacement' });
-  layers.insertOpaque(replacementLayer, insertIndex);
-  const glassLayer = new pc.Layer({ name: 'Window glass', transparentSortMode: pc.SORTMODE_MANUAL });
-  layers.insertTransparent(glassLayer, insertIndex + 1);
-  camera.camera.layers = [...camera.camera.layers, replacementLayer.id, glassLayer.id];
+  const worldTransparentIndex=layers.layerList.findIndex((layer,index)=>
+    layer.id===pc.LAYERID_WORLD && layers.subLayerList[index]);
+  const glassLayer=new pc.Layer({name:'Glass behind cabin splats',transparentSortMode:pc.SORTMODE_MANUAL});
+  layers.insertTransparent(glassLayer,worldTransparentIndex<0?0:worldTransparentIndex);
+  camera.camera.layers=[...camera.camera.layers,glassLayer.id];
 
   const vertexGLSL = `
     attribute vec3 aPosition;
     attribute vec3 aNormal;
     attribute vec2 aUv0;
     uniform mat4 matrix_viewProjection;
+    uniform mat4 matrix_model;
     varying vec3 vWorld;
     varying vec3 vNormal;
     varying vec2 vUv;
     void main(void) {
-      vWorld = aPosition; vNormal = aNormal; vUv = aUv0;
-      gl_Position = matrix_viewProjection * vec4(aPosition, 1.0);
+      vWorld = (matrix_model * vec4(aPosition,1.0)).xyz; vNormal = aNormal; vUv = aUv0;
+      gl_Position = matrix_viewProjection * vec4(vWorld, 1.0);
     }`;
   const attributes = { aPosition: pc.SEMANTIC_POSITION, aNormal: pc.SEMANTIC_NORMAL, aUv0: pc.SEMANTIC_TEXCOORD0 };
   const scenery = new pc.ShaderMaterial({
@@ -76,8 +75,8 @@ export async function createWindows(pc, app, camera, { reducedMotion = false } =
   scenery.setParameter('uOcean', texture);
   scenery.setParameter('uTime', 0);
   scenery.blendType = pc.BLEND_NONE;
-  scenery.depthTest = true; scenery.depthWrite = true;
-  scenery.cull = pc.CULLFACE_NONE;
+  scenery.depthTest = true; scenery.depthWrite = false;
+  scenery.cull = pc.CULLFACE_FRONT;
   scenery.update();
 
   const glass = new pc.ShaderMaterial({
@@ -124,23 +123,28 @@ export async function createWindows(pc, app, camera, { reducedMotion = false } =
     mesh.setIndices([0,1,2, 0,2,3]); mesh.update(); meshes.push(mesh);
     return mesh;
   };
-  windowPanes.forEach((pane, index) => {
-    for (const isGlass of [false, true]) {
-      const entity = new pc.Entity(`${pane.name} ${isGlass ? 'glass' : 'ocean'}`);
-      const instance = new pc.MeshInstance(makePaneMesh(pane, isGlass ? 0.006 : 0),
-        isGlass ? glass : scenery, entity);
-      instance.castShadow = false; instance.receiveShadow = false;
-      instance.drawOrder = index;
-      entity.addComponent('render', { meshInstances: [instance],
-        layers: isGlass ? [glassLayer.id] : [pane.overlayExterior ? replacementLayer.id : pc.LAYERID_WORLD] });
-      root.addChild(entity);
-    }
+  const sphereMesh=pc.createSphere(app.graphicsDevice,{radius:40,latitudeBands:32,longitudeBands:64});
+  meshes.push(sphereMesh);
+  const sphere=new pc.Entity('Sea and sky sphere outside the entire cabin');
+  sphere.setPosition(0,1.6626,0);
+  const sphereInstance=new pc.MeshInstance(sphereMesh,scenery,sphere);
+  sphereInstance.castShadow=false; sphereInstance.receiveShadow=false;
+  sphere.addComponent('render',{meshInstances:[sphereInstance],layers:[pc.LAYERID_WORLD]});
+  root.addChild(sphere);
+  windowPanes.forEach((pane,index)=>{
+    const entity=new pc.Entity(`${pane.name} transparent glass`);
+    const instance=new pc.MeshInstance(makePaneMesh(pane,0.006),glass,entity);
+    instance.castShadow=false; instance.receiveShadow=false;
+    instance.drawOrder=index;
+    entity.addComponent('render',{meshInstances:[instance],layers:[glassLayer.id]});
+    root.addChild(entity);
   });
+  const cutout=installExteriorCutout(bridge.gsplat);
   let time = 0, destroyed = false;
   return {
     root,
     get enabled() { return root.enabled; },
-    setEnabled(value) { root.enabled = Boolean(value); return root.enabled; },
+    setEnabled(value) { root.enabled = Boolean(value); cutout.setEnabled(root.enabled); return root.enabled; },
     update(dt) {
       if (destroyed || !root.enabled || reducedMotion) return;
       time += Math.min(Math.max(dt, 0), 0.1);
@@ -148,8 +152,8 @@ export async function createWindows(pc, app, camera, { reducedMotion = false } =
     },
     destroy() {
       if (destroyed) return; destroyed = true;
-      camera.camera.layers = camera.camera.layers.filter(id => id !== glassLayer.id && id !== replacementLayer.id);
-      root.destroy(); app.scene.layers.remove(glassLayer); app.scene.layers.remove(replacementLayer);
+      camera.camera.layers = camera.camera.layers.filter(id => id !== glassLayer.id);
+      cutout.destroy(); root.destroy(); app.scene.layers.remove(glassLayer);
       scenery.destroy(); glass.destroy(); meshes.forEach(mesh => mesh.destroy());
       app.assets.remove(asset); asset.unload();
     }
